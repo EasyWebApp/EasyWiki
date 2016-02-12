@@ -1,0 +1,71 @@
+<!DocType HTML>
+<html lang="zh-CN"><head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta charset="UTF-8" />
+
+    <link rel="shortcut icon" type="image/x-icon" href="core/image/favicon.ico" />
+    <link rel="bookmark" type="image/x-icon" href="core/image/favicon.ico" />
+    <title>EasyWiki 易维基 - 简洁、高效的开放内容系统</title>
+
+    <link rel="stylesheet" href="core/css/EasyWebUI.css" />
+    <link rel="stylesheet" href="core/css/index.css" />
+
+    <link rel="console" href="console" />
+    <script src="core/javascript/EasyImport.js"></script><script>
+        ImportJS([
+            {
+                'iQuery+.js':                                           true,
+                'http://cdn.bootcss.com/marked/0.3.5/marked.min.js':    true
+            },
+            {
+                '../css/EasyWebUI.js':    true,
+                'EasyWebApp.js':          true
+            },
+            'index.js'
+        ]);
+    </script>
+</head><body class="Grid-Row">
+    <ul id="Main_Nav" class="Grid-Column Column_1-6 No_Select">
+        <li class="Head" target="_self" href="#_About">EasyWiki</li>
+        <li target="_self" href="core/html/category.html?title=editer">
+            编辑入门
+        </li>
+        <li target="_self" href="core/html/category.html?title=setup">
+            部署教程
+        </li>
+        <li target="_self" href="core/html/category.html?title=development">
+            开发文档
+        </li>
+    </ul>
+    <div class="Grid-Column">
+        <div id="User_Bar" class="Grid-Row CenterY No_Select">
+            <form class="Grid-Column CenterX"
+                  target="_self" action="/api/search?callback=?" href="html/search.html">
+                <input type="text" name="keyword" placeholder="全文搜索" />
+            </form>
+            <div class="Grid-Column">
+                <div class="DropDown Head">
+                    <span name="user">test_32</span>
+                    <ul class="DropDown Body">
+                        <li>账号设置</li>
+                        <li class="Red">退出系统</li>
+                        <li class="Separator"></li>
+                        <li>帮助</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div id="Main_View">
+            <h1 class="CenterX">
+                欢迎使用由 EasyWebApp v2 驱动的内容系统！
+            </h1>
+        </div>
+        <div class="InnerPage" id="_About">
+            <p class="CenterX">
+                感谢<em class="Text">WikiPedia</em>对<em class="Text">EasyWiki</em>框架设计的启迪！
+            </p>
+        </div>
+    </div>
+</body></html>
