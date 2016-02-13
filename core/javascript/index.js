@@ -19,6 +19,13 @@
         if ((! $.isEmptyObject(iData))  &&  (iData.status === false))
             return BOM.alert(iData.msg);
 
+        if (_TP_.slice(-3) != '.md')  return;
+
+        $('a[href]', this).attr('href',  function () {
+            return  (
+                ($.urlDomain( arguments[1] )  ?  ''  :  '#!')  +  arguments[1]
+            );
+        });
     }).WebApp();
 
 })(self, self.document, self.iQuery);
