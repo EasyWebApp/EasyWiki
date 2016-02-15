@@ -23,7 +23,7 @@
 
         $('a[href]', this).attr('href',  function () {
             return  (
-                ($.urlDomain( arguments[1] )  ?  ''  :  '#!')  +  arguments[1]
+                ($.urlDomain( arguments[1] )  ?  ''  :  '#!data/')  +  arguments[1]
             );
         });
     }).WebApp();
