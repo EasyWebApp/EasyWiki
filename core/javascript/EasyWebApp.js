@@ -423,12 +423,20 @@
 
     $.extend(InnerPage.prototype, {
         boot:    function (iRender) {
-            var $_API = $('head link[src]'),
-                $_Page = $('head link[target][href]');
+            var This_Page = this,
+                $_Page = $('head link[target][href]'),
+                $_API = $('head link[src]');
 
             if ( $_Page.length )
                 this.ownerApp.domRoot.one('pageReady',  function () {
-                    BOM.location.hash = '#!' + $_Page.remove().attr('href');
+                    return  arguments[1].loadLink(
+                        $_Page.attr(['target', 'href'])
+                    );
+
+                    BOM.location.hash = '#!' + arguments[1].makeURL(
+                        $_Page.remove().attr('href'),
+                        This_Page.sourceLink.getData()
+                    ).slice(0, -1);
                 });
 
             if (! $_API.length)  return iRender.call(this.ownerApp);
@@ -469,7 +477,7 @@
 
                     $_Body.sandBox(iHTML,  (
                         ((iSelector && no_Link) ? iSelector : 'body > *')  +
-                            ', head link[src]'
+                            ', head link[target]'
                     ),  function ($_Content) {
                         $_Content.filter('link').appendTo('head');
 
