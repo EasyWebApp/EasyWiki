@@ -22,9 +22,11 @@
         if (_TP_.slice(-3) != '.md')  return;
 
         $('a[href]', this).attr('href',  function () {
-            return  (
-                ($.urlDomain( arguments[1] )  ?  ''  :  '#!data/')  +  arguments[1]
-            );
+            if (! $.urlDomain(arguments[1])) {
+                this.setAttribute('rel', 'nofollow');
+                return  '#!data/' + arguments[1];
+            }
+            return arguments[1];
         });
     }).WebApp();
 
