@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]     v2.3  (2016-02-17)  Beta
+//      [Version]     v2.3  (2016-02-22)  Stable
 //
 //      [Based on]    iQuery  |  jQuery with jQuery+,
 //
@@ -30,6 +30,13 @@
         this.$_DOM.data('EWA_PageLink', this);
 
         $.extend(this, arguments.callee.getAttr(this.$_DOM));
+
+        switch (this.target) {
+            case '_top':      this.type = 'Outer';  break;
+            case '_blank':    this.type = 'Data';   break;
+            case '_self':     ;
+            default:          if (this.href)  this.type = 'Inner';
+        }
         this.href = this.href || this.app.history.last().HTML;
         this.method = (this.method || 'Get').toLowerCase();
 
@@ -115,7 +122,10 @@
 
             if ( this.$_Page )
                 this.$_Page.appendTo(
-                    this.sourceLink.getTarget().empty()
+                    (
+                        this.ownerApp.history.isForward(this) ?
+                            this : this.ownerApp.history.last(true)
+                    ).sourceLink.getTarget().empty()
                 ).fadeIn();
             else {
                 this.sourceLink = new PageLink(
@@ -175,10 +185,11 @@
     }
 
     $.extend(InnerHistory.prototype, {
-        splice:    Array.prototype.splice,
-        push:      Array.prototype.push,
-        slice:     Array.prototype.slice,
-        move:      function () {
+        splice:       Array.prototype.splice,
+        push:         Array.prototype.push,
+        slice:        Array.prototype.slice,
+        indexOf:      Array.prototype.indexOf,
+        move:         function () {
             if ($.isPlainObject( arguments[0] ))
                 var iState = arguments[0];
             else
@@ -191,7 +202,7 @@
             if ((! iState)  ||  ((iState.DOM_Index + 2) == this.length))
                 this[this.length - 1].$_Page = $_Page;
         },
-        write:     function (iLink) {
+        write:        function (iLink) {
             if (this.length)  this.move( arguments[1] );
 
             this.prevIndex = this.lastIndex++ ;
@@ -209,7 +220,7 @@
             );
             return iNew;
         },
-        cache:     function () {
+        cache:        function () {
             var iNew = this[this.lastIndex];
 
             for (var i = 0;  i < this.lastIndex;  i++)
@@ -221,13 +232,18 @@
                 )
                     return this[i];
         },
-        last:      function () {
+        last:         function () {
             var iPage = this[this.lastIndex] || { };
             return  arguments[0] ? iPage : iPage.valueOf();
         },
-        prev:      function () {
+        prev:         function () {
             var iPage = this[this.prevIndex] || { };
             return  arguments[0] ? iPage : iPage.valueOf();
+        },
+        isForward:    function () {
+            return (
+                this.indexOf( arguments[0] )  >  this.indexOf( this.last(true) )
+            );
         }
     });
 
@@ -314,7 +330,7 @@
         iURL = $.split(iURL, '?', 2);
         iData = iData || { };
 
-        var iJSONP = iURL[1].match(/&?([^=]+)=\?/);
+        var iJSONP = ('&' + iURL[1]).match(/&([^=]+)=\?/);
         iJSONP = iJSONP && iJSONP[1];
 
         var This_App = this,
@@ -362,14 +378,15 @@
         getURL:       function (iKey) {
             if (! this[iKey])  return '';
 
-            this[iKey] = this.app.makeURL(
-                this[iKey] || '',
-                this.getData(),
-                this.method.match(/Get|Delete/i)  &&  this.getArgs()
-            );
-            if ((iKey == 'href')  &&  (this[iKey].slice(-1) == '?'))
-                this[iKey] = this[iKey].slice(0, -1);
-
+            if ((iKey != 'href')  ||  (this[iKey][0] != '#')) {
+                this[iKey] = this.app.makeURL(
+                    this[iKey] || '',
+                    this.getData(),
+                    this.method.match(/Get|Delete/i)  &&  this.getArgs()
+                );
+                if ((iKey == 'href')  &&  (this[iKey].slice(-1) == '?'))
+                    this[iKey] = this[iKey].slice(0, -1);
+            }
             return this[iKey];
         },
         prefetch:     function () {
@@ -541,7 +558,8 @@
             if (iCache)  return iCache.show().onReady();
 
         /* ----- Load DOM  from  Network ----- */
-            var iData,  Load_Stage = this.href ? 2 : 1;
+            var iData,  Need_HTML = (this.type == 'Inner');
+            var Load_Stage = Need_HTML ? 2 : 1;
 
             function Page_Load() {
                 if (arguments[0])  iData = arguments[0];
@@ -553,7 +571,7 @@
 
             this.loadData(Page_Load);
 
-            if (this.href)  This_Page.load(this, Page_Load);
+            if (Need_HTML)  This_Page.load(this, Page_Load);
         },
         loadPage:        function () {
             var iReturn = this.app.domRoot.triggerHandler('appExit', [
