@@ -1,3 +1,22 @@
+//
+//                >>>  EasyWiki  <<<
+//
+//
+//      [Version]     v0.2  (2016-02-23)  Alpha
+//
+//      [Based on]    iQuery  ||  jQuery with jQuery+,
+//
+//                    iQuery+  v0.7+,
+//
+//                    marked.js  v0.3+,
+//
+//                    EasyWebApp  v2.3+
+//
+//
+//            (C)2016    shiy2008@gmail.com
+//
+
+
 (function (BOM, DOM, $) {
 
     function Data_Fix(iArray) {
@@ -12,7 +31,26 @@
         });
     }
 
-    $('#Main_View').on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
+    var iMainNav = $.ListView('#Main_Nav',  function ($_Item, iValue) {
+
+            $('a[rel="nofollow"]', $_Item[0]).text(iValue.text)[0].href =
+                '#' + iValue.id;
+            $_Item.attr('title', iValue.text);
+        }),
+        $_MainView = $('#Main_View');
+
+    iMainNav.$_View.click(function () {
+        var $_Target = $(arguments[0].target);
+
+        if ( $_Target.is('a[rel="nofollow"]') ) {
+            $_MainView.scrollTo(
+                '*[id="'  +  $_Target.attr('href').slice(1)  +  '"]'
+            );
+            return false;
+        }
+    });
+
+    $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
             _PP_ = $.fileName(Prev_Page.HTML);
 
@@ -28,6 +66,17 @@
             }
             return arguments[1];
         });
+
+        iMainNav.clear().render(
+            $.map($('h2', this),  function (iHeader) {
+                if (iHeader.id == '-')  iHeader.id = $.uuid('Header');
+
+                return {
+                    id:      iHeader.id,
+                    text:    $(iHeader).text()
+                };
+            })
+        );
     }).WebApp();
 
 })(self, self.document, self.iQuery);

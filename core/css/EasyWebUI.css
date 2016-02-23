@@ -51,7 +51,6 @@ input, textarea, select, button {
 /* --- HyperLink --- */
 a:link, a:visited {
     text-decoration:    none;
-    color:              black;
 }
 a:hover, a:active {
     text-decoration:    underline;
