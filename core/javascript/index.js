@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]     v0.2  (2016-02-23)  Alpha
+//      [Version]     v0.3  (2016-02-24)  Alpha
 //
 //      [Based on]    iQuery  ||  jQuery with jQuery+,
 //
@@ -31,7 +31,12 @@
         });
     }
 
-    var iMainNav = $.ListView('#Main_Nav',  function ($_Item, iValue) {
+    var $_Body = $(DOM.body).swipe(function () {
+            iMainNav.$_View[
+                (arguments[0].deltaX < 0)  ?  'show'  :  'hide'
+            ]();
+        }),
+        iMainNav = $.ListView('#Main_Nav',  function ($_Item, iValue) {
 
             $('a[rel="nofollow"]', $_Item[0]).text(iValue.text)[0].href =
                 '#' + iValue.id;
@@ -57,7 +62,17 @@
         if ((! $.isEmptyObject(iData))  &&  (iData.status === false))
             return BOM.alert(iData.msg);
 
-        if (_TP_.slice(-3) != '.md')  return;
+        if (_TP_.slice(-3) != '.md') {
+            $_Body.removeClass('Entry_Content');
+            return;
+        }
+
+        $_Body.addClass('Entry_Content');
+
+        $('#QRcode > .Body').empty().qrcode({
+            render:    $.browser.modern ? 'image' : 'div',
+            text:      BOM.location.href.split('#')[0] + '#!' + This_Page.HTML
+        });
 
         $('a[href]', this).attr('href',  function () {
             if (! $.urlDomain(arguments[1])) {
@@ -66,6 +81,7 @@
             }
             return arguments[1];
         });
+    }).on('pageReady',  function () {
 
         iMainNav.clear().render(
             $.map($('h2', this),  function (iHeader) {

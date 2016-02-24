@@ -48,7 +48,11 @@ html, body {
     background:      transparent;
     filter:          none;
 }
-
+@media (max-width: 960px) {
+    #Main_Nav {
+        display:    none  !important;
+    }
+}
 
 #User_Bar {
     box-shadow:    0.3em  0.2em  1em  gray;
@@ -57,14 +61,34 @@ html, body {
 #User_Bar > .Grid-Column {
     padding:    0.5em;
 }
-#User_Bar .DropDown.Body > li {
+#QRcode {
+    display:    none;
+}
+.Entry_Content #QRcode {
+    display:    block;
+}
+#UserInfo {
+    float:        right;
+    min-width:    6em;
+}
+#UserInfo > .DropDown.Body > li {
     padding:    0.5em  1em;
 }
-
+@media (max-width: 640px) {
+    .DropDown.Head {
+        border:    none;
+    }
+    .DropDown.Head:before {
+        content:    none;
+    }
+    #UserInfo {
+        min-width:    4em;
+    }
+}
 
 #Main_View {
     padding:     1em  1em  0;
-    height:      95.4%;
+    height:      93.4%;
     overflow:    auto;
 }
 form [multiple] label {
