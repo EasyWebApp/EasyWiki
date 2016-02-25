@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]     v0.3  (2016-02-24)  Alpha
+//      [Version]     v0.3  (2016-02-25)  Alpha
 //
 //      [Based on]    iQuery  ||  jQuery with jQuery+,
 //
@@ -10,7 +10,9 @@
 //
 //                    marked.js  v0.3+,
 //
-//                    EasyWebApp  v2.3+
+//                    EasyWebApp  v2.3+,
+//
+//                    jQuery-QRcode  v0.12+
 //
 //
 //            (C)2016    shiy2008@gmail.com
@@ -31,16 +33,16 @@
         });
     }
 
-    var $_Body = $(DOM.body).swipe(function () {
-            iMainNav.$_View[
-                (arguments[0].deltaX < 0)  ?  'show'  :  'hide'
-            ]();
-        }),
-        iMainNav = $.ListView('#Main_Nav',  function ($_Item, iValue) {
+    var iMainNav = $.ListView('#Main_Nav',  function ($_Item, iValue) {
 
             $('a[rel="nofollow"]', $_Item[0]).text(iValue.text)[0].href =
                 '#' + iValue.id;
             $_Item.attr('title', iValue.text);
+
+            if (! iValue.list)  return;
+
+            this.fork($_Item).clear().render( iValue.list )
+                .$_View.attr('class', '');
         }),
         $_MainView = $('#Main_View');
 
@@ -54,6 +56,38 @@
             return false;
         }
     });
+
+    var $_Body = $(DOM.body).swipe(function () {
+            iMainNav.$_View[
+                (arguments[0].deltaX < 0)  ?  'show'  :  'hide'
+            ]();
+        });
+
+    function Content_Tree($_Tree, iCallback) {
+        var iTree = [ ];
+
+        for (
+            var  i = 0,  _Tree_ = iTree,  _Level_ = 0,  _Parent_;
+            i < $_Tree.length;
+            i++
+        ) {
+            if (i > 0)
+                _Level_ = $_Tree[i].tagName[1]  -  $_Tree[i - 1].tagName[1];
+
+            if (_Level_ > 0)
+                _Tree_ = _Tree_.slice(-1)[0].list = $.extend([ ], {
+                    parent:    _Tree_
+                });
+            else if (_Level_ < 0) {
+                _Parent_ = _Tree_.parent;
+                delete _Tree_.parent;
+                _Tree_ = _Parent_;
+            }
+            _Tree_.push( iCallback.call($_Tree[i]) );
+        }
+
+        return iTree;
+    }
 
     $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
@@ -70,8 +104,12 @@
         $_Body.addClass('Entry_Content');
 
         $('#QRcode > .Body').empty().qrcode({
-            render:    $.browser.modern ? 'image' : 'div',
-            text:      BOM.location.href.split('#')[0] + '#!' + This_Page.HTML
+            render:     $.browser.modern ? 'image' : 'div',
+            ecLevel:    'H',
+            radius:     0.5,
+            mode:       2,
+            label:      $('h1', this).text().slice(0, 10),
+            text:       BOM.location.href.split('#')[0] + '#!' + This_Page.HTML
         });
 
         $('a[href]', this).attr('href',  function () {
@@ -84,12 +122,12 @@
     }).on('pageReady',  function () {
 
         iMainNav.clear().render(
-            $.map($('h2', this),  function (iHeader) {
-                if (iHeader.id == '-')  iHeader.id = $.uuid('Header');
+            Content_Tree($('h1, h2, h3', this),  function () {
+                if (this.id == '-')  this.id = $.uuid('Header');
 
                 return {
-                    id:      iHeader.id,
-                    text:    $(iHeader).text()
+                    id:      this.id,
+                    text:    $(this).text()
                 };
             })
         );

@@ -8,17 +8,40 @@ html, body {
 
 
 #Main_Nav {
-    list-style:    none;
-    padding:       0;
     background:    rgb(40, 40, 40);
     color:         lightgray;
+    max-width:     9.5em;
 }
-#Main_Nav li {
+@media (max-width: 960px) {
+    #Main_Nav {
+        display:    none  !important;
+    }
+}
+@media (min-width: 1280px) {
+    #Main_Nav {
+        max-width:    15em;
+    }
+}
+#Main_Nav,  #Main_Nav ul  {
+    list-style:    none;
+    padding:       0;
+}
+#Main_Nav li > a {
+    padding:            1em;
+    color:              inherit;
+    text-decoration:    none;
+    display:            block;
+}
+#Main_Nav > li > a {
+    text-align:     center;
+    font-weight:    bold;
+    font-size:      1.4em;
+}
+#Main_Nav > li > ul > li > a {
     border-left:    0.3em  solid  transparent;
-    cursor:         pointer;
 }
-#Main_Nav li:hover,
-#Main_Nav li.active {
+#Main_Nav ul > li > a:hover,
+#Main_Nav ul > li > a.active {
     border-color:    rgb(100, 150, 240);
     filter:          progid:DXImageTransform.Microsoft.Gradient(
         GradientType=0, StartColorStr="#7F6496F0", EndColorStr="#7F6496F0"
@@ -27,32 +50,17 @@ html, body {
     background:      rgba(100, 150, 240, 0.5);
     color:           white;
 }
-:root #Main_Nav li:hover,
-:root #Main_Nav li.active {
+:root #Main_Nav ul > li > a:hover,
+:root #Main_Nav ul > li > a.active {
     filter:    none \0;
 }
-#Main_Nav li a {
-    padding:            1em;
-    color:              inherit;
-    text-decoration:    none;
-    display:            block;
-    max-width:          9em;
+#Main_Nav > li > ul > li > ul {
+    font-size:    0.8em;
 }
-#Main_Nav li.Head {
-    font-weight:    bold;
-    text-align:     center;
+#Main_Nav > li > ul > li > ul > li > a {
+    padding-left:    3em;
 }
-#Main_Nav li.Head:hover,
-#Main_Nav li.Head.active {
-    border-color:    transparent;
-    background:      transparent;
-    filter:          none;
-}
-@media (max-width: 960px) {
-    #Main_Nav {
-        display:    none  !important;
-    }
-}
+
 
 #User_Bar {
     box-shadow:    0.3em  0.2em  1em  gray;
