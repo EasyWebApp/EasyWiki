@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]     v0.3  (2016-02-25)  Alpha
+//      [Version]     v0.3  (2016-02-26)  Beta
 //
 //      [Based on]    iQuery  ||  jQuery with jQuery+,
 //
@@ -60,6 +60,27 @@
                 (arguments[0].deltaX < 0)  ?  'show'  :  'hide'
             ]();
         });
+
+    $_MainView.scroll(function () {
+        if (arguments[0].target !== this)  return;
+
+        var iAnchor = $_MainView.offset(),
+            iFontSize = $_Body.css('font-size') / 2;
+        var $_Anchor = $(DOM.elementFromPoint(
+                iAnchor.left + $_MainView.css('padding-left') + iFontSize,
+                iAnchor.top + $_MainView.css('padding-top') + iFontSize
+            ));
+        $_Anchor = $_Anchor.prevAll('h1, h2, h3');
+
+        if (! $.contains(this, $_Anchor[0]))  return;
+
+        $_Anchor = $('#Main_Nav a[href="#' + $_Anchor[0].id + '"]');
+
+        $('#Main_Nav li.active').removeClass('active');
+
+        $.ListView.getInstance( $_Anchor.parents('ul')[0] )
+            .focus( $_Anchor[0].parentNode );
+    });
 
     $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),

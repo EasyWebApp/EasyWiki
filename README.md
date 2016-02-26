@@ -1,7 +1,6 @@
 # EasyWiki 易维基 - 简洁、高效的开放内容系统
 
 
-
 ## 【核心特性】
 
  1. **词条正文** 支持 **MarkDown 代码**
@@ -11,6 +10,10 @@
  5. **Web 前端程序** 可独立部署、使用， **Git/SVN 友好**
  6. 基于 **jQuery 兼容 API** 构建，方便二次开发
 
+
+## 【版本简史】
+
+ - v0.3 Beta —— 2016年2月26日  [Web 前端可独立部署](http://git.oschina.net/Tech_Query/EasyWiki/milestones/1)
 
 
 ## 【特别感谢】

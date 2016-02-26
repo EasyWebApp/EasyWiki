@@ -40,8 +40,8 @@ html, body {
 #Main_Nav > li > ul > li > a {
     border-left:    0.3em  solid  transparent;
 }
-#Main_Nav ul > li > a:hover,
-#Main_Nav ul > li > a.active {
+#Main_Nav ul > li:hover > a,
+#Main_Nav ul > li.active > a {
     border-color:    rgb(100, 150, 240);
     filter:          progid:DXImageTransform.Microsoft.Gradient(
         GradientType=0, StartColorStr="#7F6496F0", EndColorStr="#7F6496F0"
@@ -50,8 +50,8 @@ html, body {
     background:      rgba(100, 150, 240, 0.5);
     color:           white;
 }
-:root #Main_Nav ul > li > a:hover,
-:root #Main_Nav ul > li > a.active {
+:root #Main_Nav ul > li:hover > a,
+:root #Main_Nav ul > li.active > a {
     filter:    none \0;
 }
 #Main_Nav > li > ul > li > ul {
