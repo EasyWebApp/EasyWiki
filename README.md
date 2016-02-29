@@ -23,3 +23,7 @@
  1. http://git.oschina.net/Tech_Query/MDwiki_zh
  2. http://git.oschina.net/Tech_Query/WikiWand_China
  3. http://git.oschina.net/Tech_Query/EasyWebApp
+
+没有这些优秀的开源软件，就没有本项目 **迅速而稳健的开发** ——
+
+ 1. https://github.com/SegmentFault/HyperDown
