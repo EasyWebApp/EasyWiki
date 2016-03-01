@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]     v0.3  (2016-02-26)  Beta
+//      [Version]     v0.4  (2016-03-01)  Beta
 //
 //      [Based on]    iQuery  ||  jQuery with jQuery+,
 //
@@ -33,6 +33,8 @@
         });
     }
 
+    var $_MainView = $('#Main_View');
+
     var iMainNav = $.TreeView(
             $.ListView('#Main_Nav',  function ($_Item, iValue) {
 
@@ -52,35 +54,24 @@
                         '*[id="'  +  $_Target.attr('href').slice(1)  +  '"]'
                     );
             }
-        ),
-        $_MainView = $('#Main_View');
+        ).linkage($_MainView,  function ($_Anchor) {
+            $_Anchor = $_Anchor.prevAll('h1, h2, h3');
+
+            if (! $.contains(this, $_Anchor[0]))  return;
+
+            $_Anchor = $('#Main_Nav a[href="#' + $_Anchor[0].id + '"]');
+
+            $('#Main_Nav li.active').removeClass('active');
+
+            $.ListView.getInstance( $_Anchor.parents('ul')[0] )
+                .focus( $_Anchor[0].parentNode );
+        });
 
     var $_Body = $(DOM.body).swipe(function () {
             iMainNav.unit.$_View[
                 (arguments[0].deltaX < 0)  ?  'show'  :  'hide'
             ]();
         });
-
-    $_MainView.scroll(function () {
-        if (arguments[0].target !== this)  return;
-
-        var iAnchor = $_MainView.offset(),
-            iFontSize = $_Body.css('font-size') / 2;
-        var $_Anchor = $(DOM.elementFromPoint(
-                iAnchor.left + $_MainView.css('padding-left') + iFontSize,
-                iAnchor.top + $_MainView.css('padding-top') + iFontSize
-            ));
-        $_Anchor = $_Anchor.prevAll('h1, h2, h3');
-
-        if (! $.contains(this, $_Anchor[0]))  return;
-
-        $_Anchor = $('#Main_Nav a[href="#' + $_Anchor[0].id + '"]');
-
-        $('#Main_Nav li.active').removeClass('active');
-
-        $.ListView.getInstance( $_Anchor.parents('ul')[0] )
-            .focus( $_Anchor[0].parentNode );
-    });
 
     $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
