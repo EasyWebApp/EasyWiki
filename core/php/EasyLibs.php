@@ -180,7 +180,7 @@ class SQL_Table {
         foreach ($_Record  as  $_Name => $_Value)
             if ($_Value !== null) {
                 $_Field_Name[] = $_Name;
-                $_Field_Value[] = (gettype($_Value) == 'string')  ?
+                $_Field_Value[] = is_string( $_Value )  ?
                     $this->ownerBase->quote($_Value)  :  $_Value;
             }
         return  $this->ownerBase->exec(join('', array(
@@ -196,7 +196,7 @@ class SQL_Table {
 
         foreach ($_Data  as  $_Name => $_Value)
             $_Set_Data[] = "{$_Name}=".(
-                (gettype($_Value) == 'string')  ?
+                is_string( $_Value )  ?
                     $this->ownerBase->quote($_Value)  :  $_Value
             );
         return  $this->ownerBase->exec(join(' ', array(

@@ -27,3 +27,5 @@
 没有这些优秀的开源软件，就没有本项目 **迅速而稳健的开发** ——
 
  1. https://github.com/SegmentFault/HyperDown
+ 2. http://phpquery-library.blogspot.com/
+ 3. http://git.oschina.net/Tech_Query/EasyLibs.php
