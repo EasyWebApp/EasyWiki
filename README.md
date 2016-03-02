@@ -13,6 +13,10 @@
 
 ## 【版本简史】
 
+ - v0.5 Beta —— 2016年3月2日
+   - 支持 **`#!` SEO 规则**（基于 PHP）
+   - 发布 **Docker 部署**（[灵雀云仓库](https://hub.alauda.cn/repos/techquery/easywiki)）
+   - 内置 **爬虫式数据迁移工具**
  - v0.3 Beta —— 2016年2月26日  [Web 前端可独立部署](http://git.oschina.net/Tech_Query/EasyWiki/milestones/1)
 
 

@@ -2,17 +2,17 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]     v0.4  (2016-03-01)  Beta
+//      [Version]    v0.5  (2016-03-02)  Beta
 //
-//      [Based on]    iQuery  ||  jQuery with jQuery+,
+//      [Require]    iQuery  ||  jQuery with jQuery+,
 //
-//                    iQuery+  v0.7+,
+//                   iQuery+  v0.7+,
 //
-//                    marked.js  v0.3+,
+//                   marked.js  v0.3+,
 //
-//                    EasyWebApp  v2.3+,
+//                   EasyWebApp  v2.3+,
 //
-//                    jQuery-QRcode  v0.12+
+//                   jQuery-QRcode  v0.12+
 //
 //
 //            (C)2016    shiy2008@gmail.com
@@ -20,6 +20,8 @@
 
 
 (function (BOM, DOM, $) {
+
+    $('body > *').css('max-height',  $(BOM).height() - 220);
 
     function Data_Fix(iArray) {
         return  $.map(iArray,  function (iValue) {
