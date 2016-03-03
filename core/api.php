@@ -20,7 +20,6 @@ $_HTTP_Server->on('Get',  'category/',  function () {
         )
     ));
 })->on('Get',  'spider/',  function () {
-    include('php/HTML_Converter.php');
 
     $_Marker = new HTML_MarkDown($_GET['url'], $_GET['selector']);
 
