@@ -8,12 +8,12 @@
  3. **正文模板** 直接使用 [EasyWebApp 引擎扩展的 HTML 标签规则](http://git.oschina.net/Tech_Query/EasyWebApp#三-数据填充)
  4. 外观天生 **响应式设计**、Google **Material Design** 风格
  5. **Web 前端程序** 可独立部署、使用， **Git/SVN 友好**
- 6. 基于 **jQuery 兼容 API** 构建，方便二次开发
+ 6. 基于 [**jQuery 兼容 API**](http://git.oschina.net/Tech_Query/iQuery) 构建，方便二次开发
 
 
 ## 【版本简史】
 
- - v0.5 Beta —— 2016年3月2日
+ - v0.5 Beta —— 2016年3月4日
    - 支持 **`#!` SEO 规则**（基于 PHP）
    - 发布 **Docker 部署**（[灵雀云仓库](https://hub.alauda.cn/repos/techquery/easywiki)）
    - 内置 **爬虫式数据迁移工具**

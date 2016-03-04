@@ -21,14 +21,44 @@ $_HTTP_Server->on('Get',  'category/',  function () {
     ));
 })->on('Get',  'spider/',  function () {
 
+    //  HTML to MarkDown
     $_Marker = new HTML_MarkDown($_GET['url'], $_GET['selector']);
 
-    $_Marker->convertTo('../data/xxx.md');
+    preg_match($_GET['name'], $_GET['url'], $_Name);
+
+    $_Marker->convertTo("../data/{$_Name[1]}.md");
+
+    //  Fetch History
+    $_SQL_DB = new SQLite('../data/fetch');
+
+    $_SQL_DB->createTable('Page', array(
+        'PID'    =>  'Integer Primary Key',
+        'URL'    =>  'Text not Null Unique',
+        'Times'  =>  'Integer default 0',
+        'Title'  =>  "Text default ''"
+    ));
+    foreach ($_Marker->link['inner'] as $_Link)
+        $_SQL_DB->Page->insert(array('URL' => $_Link));
+
+    $_Page = $_SQL_DB->query(array(
+        'select'  =>  'PID, URL',
+        'from'    =>  'Page',
+        'where'   =>  "(URL = '{$_GET['url']}') and (Times = 0)"
+    ));
+
+    if (count( $_Page ))
+        $_SQL_DB->Page->update("PID = {$_Page[0]['PID']}", array(
+            'Times'  =>  1
+        ));
 
     return array(
         'header'    =>    array(
             'Content-Type'  =>  'application/json'
         ),
-        'data'      =>    $_Marker->link['inner']
+        'data'      =>    $_SQL_DB->query(array(
+            'select'  =>  'URL',
+            'from'    =>  'Page',
+            'where'   =>  'Times = 0'
+        ), PDO::FETCH_COLUMN, 0)
     );
 });
