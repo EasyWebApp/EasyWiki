@@ -1,0 +1,25 @@
+<form target="content" action="core/api.php">
+    <div class="Row">
+        <label>要抓取的网页</label>
+        <input type="text" name="url" required placeholder="完整 URL" />
+    </div>
+    <div class="Row">
+        <label>文件名 规则</label>
+        <input type="text" name="name" required placeholder="从 URL 匹配的正则表达式" />
+    </div>
+    <div class="Row">
+        <label>正文内容框</label>
+        <input type="text" name="selector" placeholder="容器元素的 CSS 选择符" />
+    </div>
+    <div class="Row">
+        <input type="submit" value="抓取" />
+    </div>
+</form>
+<table>
+    <thead>
+        <tr><th>网址</th></tr>
+    </thead>
+    <tbody name="content">
+        <tr><td></td></tr>
+    </tbody>
+</table>
