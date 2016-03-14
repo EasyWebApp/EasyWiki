@@ -248,14 +248,19 @@ class SQLite {
         }
     }
     public function query(
-        $_SQL_Array,  $_Fetch_Type = PDO::FETCH_BOTH,  $_Fetch_Args = null
+        $_SQL_Array,  $_Fetch_Type = PDO::FETCH_OBJ,  $_Fetch_Args = null
     ) {
         $_Query = $this->dataBase->query( self::queryString( $_SQL_Array ) );
 
         if (! $_Query)
             $_Query = array();
         elseif (! $_Fetch_Args)
-            $_Query = $_Query->fetchAll($_Fetch_Type);
+            $_Query = array_map(
+                function ($_Object) {
+                    return  get_object_vars( $_Object );
+                },
+                $_Query->fetchAll($_Fetch_Type)
+            );
         else
             $_Query = $_Query->fetchAll($_Fetch_Type, $_Fetch_Args);
 
@@ -695,8 +700,22 @@ abstract class HTMLConverter {
         $_URL[0] = '';
         return  join('/',  array_slice($_URL, 0, 3));
     }
+
+    private static function getDOMCharSet() {
+        $_Meta = $_DOM['meta[http-equiv="Content-Type"]'];
+
+        if ( $_Meta->size() ) {
+            preg_match(
+                '/charset=([^;]+)/i',  $_Meta->attr('content'),  $_CharSet
+            );
+            return $_CharSet[1];
+        }
+        return $_DOM['meta[charset]']->attr('charset');
+    }
+
     public $URL;
     public $domain;
+    public $CharSet;
     public $DOM;
     public $root;
     public $link = array(
@@ -706,6 +725,7 @@ abstract class HTMLConverter {
     public $rule;
 
     public function innerLink($_URL) {
+        $_URL = preg_replace('/^\/([^\/])/', '$1', $_URL);
         $_Host = parse_url($_URL, PHP_URL_HOST);
 
         if (empty( $_Host ))
@@ -727,6 +747,7 @@ abstract class HTMLConverter {
             $this->DOM = phpQuery::newDocumentHTML($_URL);
             $this->root = $this->DOM;
         }
+        $this->CharSet = self::getDOMCharSet( $this->DOM );
 
         if (is_string( $_Selector )) {
             $_DOM = $this->root[ $_Selector ];

@@ -1,5 +1,7 @@
 <?php
 
+set_time_limit(0);
+
 require_once('php/EasyLibs.php');
 
 
@@ -24,9 +26,13 @@ $_HTTP_Server->on('Get',  'category/',  function () {
     //  HTML to MarkDown
     $_Marker = new HTML_MarkDown($_GET['url'], $_GET['selector']);
 
-    preg_match($_GET['name'], $_GET['url'], $_Name);
+    $_Name = iconv($_Marker->CharSet, 'GBK', $_Marker->root['h1']->text());
 
-    $_Marker->convertTo("../data/{$_Name[1]}.md");
+    if (empty( $_Name )) {
+        preg_match($_GET['name'], $_GET['url'], $_Name);
+        $_Name = $_Name[1];
+    }
+    $_Marker->convertTo("../data/{$_Name}.md");
 
     //  Fetch History
     $_SQL_DB = new SQLite('../data/fetch');
@@ -59,6 +65,6 @@ $_HTTP_Server->on('Get',  'category/',  function () {
             'select'  =>  'URL',
             'from'    =>  'Page',
             'where'   =>  'Times = 0'
-        ), PDO::FETCH_COLUMN, 0)
+        ))
     );
 });

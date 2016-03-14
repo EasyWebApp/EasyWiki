@@ -715,6 +715,10 @@ form .Row > label[for] {
 form .Row > label[for] + * {
     width:    68.5%;
 }
+form .Row > label[for] + input[type="radio"],
+form .Row > label[for] + input[type="checkbox"] {
+    width:    auto;
+}
 form .Row.Grid-Row > .Grid-Column {
     padding-left:    0.5em;
 }

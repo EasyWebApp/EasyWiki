@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-02-26)  Stable
+//      [Version]    v1.0  (2016-03-14)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -3417,19 +3417,15 @@
     }
 
     function Idempotent_Args(iURL) {
-        iURL = iURL.split('?');
-        iURL[1] = $.extend(
-            iURL[1] ? $.paramJSON(iURL[1]) : { },  arguments[1]
-        );
+        var iData = $.extend($.paramJSON(iURL), arguments[1]);
 
-        var iPrefetch;
-        $('link[rel="next"], link[rel="prefetch"]').each(function () {
-            if ($.fileName(this.href) == $.fileName(iURL[0]))
-                iPrefetch = true;
-        });
-        if (! iPrefetch)  iURL[1]._ = $.now();
+        if (!  $.map($('link[rel="next"], link[rel="prefetch"]'),  function () {
+            if ($.fileName( arguments[0].href )  ==  $.fileName(iURL))
+                return iURL;
+        }).length)
+            iData._ = $.now();
 
-        return  (iURL[0] + '?' + $.param(iURL[1])).trim('?');
+        return  (iURL.split('?')[0] + '?' + $.param(iData)).trim('?');
     }
 
     $.extend({

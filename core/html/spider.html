@@ -1,17 +1,21 @@
-<form target="content" action="core/api.php">
+<form target="wait_fetch" action="core/api.php/spider/">
     <div class="Row">
-        <label>要抓取的网页</label>
+        <label for>要抓取的网页</label>
         <input type="text" name="url" required placeholder="完整 URL" />
     </div>
     <div class="Row">
-        <label>文件名 规则</label>
+        <label for>文件名 规则</label>
         <input type="text" name="name" required placeholder="从 URL 匹配的正则表达式" />
     </div>
     <div class="Row">
-        <label>正文内容框</label>
+        <label for>正文内容框</label>
         <input type="text" name="selector" placeholder="容器元素的 CSS 选择符" />
     </div>
     <div class="Row">
+        <label for="Auto_Fetch">自动爬取</label>
+        <input type="checkbox" id="Auto_Fetch" title="可随时取消勾选以暂停" />
+    </div>
+    <div class="Row CenterX">
         <input type="submit" value="抓取" />
     </div>
 </form>
@@ -19,7 +23,7 @@
     <thead>
         <tr><th>网址</th></tr>
     </thead>
-    <tbody name="content">
-        <tr><td></td></tr>
+    <tbody name="wait_fetch">
+        <tr><td name="URL"></td></tr>
     </tbody>
 </table>

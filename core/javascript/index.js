@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.5  (2016-03-02)  Beta
+//      [Version]    v0.5  (2016-03-14)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -82,6 +82,22 @@
         if ((! $.isEmptyObject(iData))  &&  (iData.status === false))
             return BOM.alert(iData.msg);
 
+        switch (_TP_) {
+            case 'spider.html':    {
+                var $_Auto_Fetch = $('#Auto_Fetch');
+
+                $('tbody tr', this).click(function () {
+                    var $_Spider = $_MainView.find('form');
+
+                    $_Spider.find('input[name="url"]')[0].value =
+                        $('*[name="URL"]', this).value();
+                    $_MainView.scrollTo($_Spider);
+
+                    if ( $_Auto_Fetch[0].checked )
+                        $_Spider.find('input[type="submit"]')[0].click();
+                });
+            }
+        }
         if (_TP_.slice(-3) != '.md') {
             $_Body.removeClass('Entry_Content');
             return;
