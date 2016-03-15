@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.5  (2016-03-14)  Beta
+//      [Version]    v0.5  (2016-03-15)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -22,18 +22,6 @@
 (function (BOM, DOM, $) {
 
     $('body > *').css('max-height',  $(BOM).height() - 220);
-
-    function Data_Fix(iArray) {
-        return  $.map(iArray,  function (iValue) {
-            if (iValue.time)
-                iValue.time = (new Date(iValue.time)).toLocaleString();
-
-            if ( (iValue[Image_Key] || '').indexOf('http') )
-                iValue[Image_Key] = Image_Root + iValue[Image_Key];
-
-            return iValue;
-        });
-    }
 
     var $_MainView = $('#Main_View');
 
@@ -75,6 +63,10 @@
             ]();
         });
 
+    function Time_Fix(UTS) {
+        return  (new Date(UTS)).toLocaleString();
+    }
+
     $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
             _PP_ = $.fileName(Prev_Page.HTML);
@@ -83,6 +75,16 @@
             return BOM.alert(iData.msg);
 
         switch (_TP_) {
+            case 'search.html':    {
+                iData = {
+                    result:    $.each(iData,  function () {
+                        this.cTime = Time_Fix( this.cTime );
+                        this.mTime = Time_Fix( this.mTime );
+                        this.URL = '#!' + this.URL;
+                    })
+                };
+                break;
+            }
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
 
@@ -100,17 +102,21 @@
         }
         if (_TP_.slice(-3) != '.md') {
             $_Body.removeClass('Entry_Content');
-            return;
+            return iData;
         }
 
         $_Body.addClass('Entry_Content');
+
+        var iTitle = $('h1', this).text();
+
+        DOM.title = iTitle + ' - EasyWiki';
 
         $('#QRcode > .Body').empty().qrcode({
             render:     $.browser.modern ? 'image' : 'div',
             ecLevel:    'H',
             radius:     0.5,
             mode:       2,
-            label:      $('h1', this).text().slice(0, 10),
+            label:      iTitle.slice(0, 10),
             text:       BOM.location.href.split('#')[0] + '#!' + This_Page.HTML
         });
 

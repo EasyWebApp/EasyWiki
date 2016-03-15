@@ -9,14 +9,17 @@
  4. 外观天生 **响应式设计**、Google **Material Design** 风格
  5. **Web 前端程序** 可独立部署、使用， **Git/SVN 友好**
  6. 基于 [**jQuery 兼容 API**](http://git.oschina.net/Tech_Query/iQuery) 构建，方便二次开发
+ 7. 内置 **数据迁移工具**（爬虫式）
 
 
 ## 【版本简史】
 
- - v0.5 Beta —— 2016年3月4日
+ - v0.6 Beta —— 2016年3月15日
+   - 支持 **词条名搜索**
+   - 内置 **爬虫式数据迁移工具**
+ - v0.4 Beta —— 2016年3月4日
    - 支持 **`#!` SEO 规则**（基于 PHP）
    - 发布 **Docker 部署**（[灵雀云仓库](https://hub.alauda.cn/repos/techquery/easywiki)）
-   - 内置 **爬虫式数据迁移工具**
  - v0.3 Beta —— 2016年2月26日  [Web 前端可独立部署](http://git.oschina.net/Tech_Query/EasyWiki/milestones/1)
 
 

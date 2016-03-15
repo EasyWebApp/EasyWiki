@@ -3,7 +3,7 @@
 //                >>>  EasyLibs.php  <<<
 //
 //
-//      [Version]    v2.2  (2016-03-04)  Stable
+//      [Version]    v2.2  (2016-03-15)  Stable
 //
 //      [Require]    PHP v5.3+
 //
@@ -701,7 +701,7 @@ abstract class HTMLConverter {
         return  join('/',  array_slice($_URL, 0, 3));
     }
 
-    private static function getDOMCharSet() {
+    private static function getDOMCharSet($_DOM) {
         $_Meta = $_DOM['meta[http-equiv="Content-Type"]'];
 
         if ( $_Meta->size() ) {
@@ -717,7 +717,8 @@ abstract class HTMLConverter {
     public $domain;
     public $CharSet;
     public $DOM;
-    public $root;
+    public $content;
+    public $title;
     public $link = array(
         'inner'  =>  array(),
         'outer'  =>  array()
@@ -742,19 +743,23 @@ abstract class HTMLConverter {
             $this->domain = self::getURLDomain($_URL);
 
             $this->DOM = phpQuery::newDocumentFile($_URL);
-            $this->root = $this->DOM['body'];
+            $this->content = $this->DOM['body'];
         } else {
             $this->DOM = phpQuery::newDocumentHTML($_URL);
-            $this->root = $this->DOM;
+            $this->content = $this->DOM;
         }
         $this->CharSet = self::getDOMCharSet( $this->DOM );
 
         if (is_string( $_Selector )) {
-            $_DOM = $this->root[ $_Selector ];
-            if ( $_DOM->size() )  $this->root = $_DOM;
+            $_DOM = $this->content[ $_Selector ];
+            if ( $_DOM->size() )  $this->content = $_DOM;
         }
 
-        foreach ($this->root['a[href]'] as $_Link) {
+        $_Title = $this->content->filter('h1');
+        $_Title = $_Title->size() ? $_Title : $this->content['h1'];
+        $this->title = $_Title->text();
+
+        foreach ($this->content['a[href]'] as $_Link) {
             $_HREF = $_Link->getAttribute('href');
 
             if ($_HREF[0] != '#') {
@@ -772,7 +777,7 @@ abstract class HTMLConverter {
         $_Target = array();
 
         foreach ($this->rule  as  $_Selector => $_Callback)
-            foreach ($this->root[$_Selector] as $_DOM) {/*
+            foreach ($this->content[$_Selector] as $_DOM) {/*
                 array_push($_Target, $_DOM);
             }
         usort($_Target,  function ($_A, $_B) {
@@ -790,7 +795,7 @@ abstract class HTMLConverter {
                     break;
                 }*/
         }
-        $_Text = trim( $this->root->text() );
+        $_Text = trim( $this->content->text() );
 
         return  is_string( $_File )  ?
             file_put_contents($_File, $_Text)  :  $_Text;

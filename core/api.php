@@ -8,7 +8,27 @@ require_once('php/EasyLibs.php');
 
 $_HTTP_Server = new HTTPServer();
 
-$_HTTP_Server->on('Get',  'category/',  function () {
+$_HTTP_Server->on('Get',  'search/',  function () {
+
+    $_KeyWord = iconv('UTF-8', ini_get('default_charset'), $_GET['keyword']);
+
+    return json_encode(array_map(
+        function ($_Path) {
+            $_Entry = array(
+                'cTime'  =>  filectime($_Path),
+                'mTime'  =>  filemtime($_Path)
+            );
+            $_Path = iconv(ini_get('default_charset'), 'UTF-8', $_Path);
+
+            $_Entry['URL'] = substr($_Path, 3);
+            $_Entry['title'] = substr($_Path, 8, -3);
+
+            return $_Entry;
+        },
+        glob("../data/*{$_KeyWord}*.md")
+    ));
+
+})->on('Get',  'category/',  function () {
     return json_encode(array(
         'entry'  =>  array(
             array(
@@ -26,7 +46,9 @@ $_HTTP_Server->on('Get',  'category/',  function () {
     //  HTML to MarkDown
     $_Marker = new HTML_MarkDown($_GET['url'], $_GET['selector']);
 
-    $_Name = iconv($_Marker->CharSet, 'GBK', $_Marker->root['h1']->text());
+    $_Name = iconv(
+        $_Marker->CharSet,  ini_get('default_charset'),  $_Marker->title
+    );
 
     if (empty( $_Name )) {
         preg_match($_GET['name'], $_GET['url'], $_Name);
