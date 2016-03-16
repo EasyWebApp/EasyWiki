@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.5  (2016-03-15)  Beta
+//      [Version]    v0.7  (2016-03-16)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -64,7 +64,7 @@
         });
 
     function Time_Fix(UTS) {
-        return  (new Date(UTS)).toLocaleString();
+        return  (new Date(UTS * 1000)).toLocaleString();
     }
 
     $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
@@ -80,7 +80,8 @@
                     result:    $.each(iData,  function () {
                         this.cTime = Time_Fix( this.cTime );
                         this.mTime = Time_Fix( this.mTime );
-                        this.URL = '#!' + this.URL;
+                        this.URL =
+                            BOM.location.href.split('#')[0] + '#!' + this.URL;
                     })
                 };
                 break;

@@ -1,0 +1,17 @@
+<form class="CenterX" target="message" action="core/api.php/signUp/">
+    <h2>欢迎注册 EasyWiki！</h2>
+    <pre name="message">
+    </pre>
+    <div class="Row CenterX">
+        <label for>电邮地址</label>
+        <input type="email" name="email" required placeholder="将作为登录本系统的用户名" />
+    </div>
+    <div class="Row CenterX">
+        <label for>密码</label>
+        <input type="password" name="password" required pattern="^\w{6,}$"
+               placeholder="至少6位" />
+    </div>
+    <div class="Row CenterX">
+        <input type="submit" value="注册" />
+    </div>
+</form>

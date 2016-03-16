@@ -276,6 +276,11 @@ class SQLite {
         return  $this->table[$_Name] = new SQL_Table($this->dataBase, $_Name);
     }
     public function __get($_Name) {
+        if ($_Name == 'error')
+            return array(
+                'code'  =>  $this->dataBase->errorCode(),
+                'info'  =>  $this->dataBase->errorInfo(),
+            );
         if (isset( $this->table[$_Name] ))
             return $this->table[$_Name];
         elseif ($this->existTable( $_Name ))
