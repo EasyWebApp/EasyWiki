@@ -501,7 +501,9 @@ class HTTPServer {
     public $requestIPAddress;
     public $requestCookie;
 
-    private function setStatus($_Code) {
+    private $onStart;
+
+    public function setStatus($_Code) {
         $_Message = isset( HTTP_Response::$statusCode[$_Code] )  ?
             HTTP_Response::$statusCode[$_Code]  :  '';
 
@@ -539,11 +541,15 @@ class HTTPServer {
         return $this;
     }
 
-    public function __construct($_xDomain = false) {
+    public function __construct($_xDomain = false,  $_onStart = null) {
         $_Header = $this->requestHeader = self::getRequestHeaders();
+
         $this->requestIPAddress = self::getRequestIPA( $this->requestHeader );
+
         if (isset( $_Header['Cookie'] ))
             $this->requestCookie = new HTTP_Cookie( $_Header['Cookie'] );
+
+        $this->onStart = $_onStart;
 
         if ((! $_xDomain)  ||  ($_Header['Request-Method'] != 'OPTIONS'))
             return;
@@ -624,9 +630,12 @@ class HTTPServer {
             ($_rMethod == strtoupper($_Method))  &&
             (stripos($_rPath, $_Path)  !==  false)
         ) {
-            $_Return = call_user_func(
-                $_Callback,  $_rPath,  self::getRequestArgs($_rMethod)
-            );
+            $_Return = call_user_func_array($_Callback, array(
+                $_rPath,
+                self::getRequestArgs($_rMethod),
+                isset( $this->onStart )  ?
+                    call_user_func( $this->onStart )  :  null
+            ));
             if (is_array( $_Return ))
                 $this->send($_Return['data'], $_Return['header']);
             else

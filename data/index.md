@@ -8,11 +8,21 @@
 
 ## 【安装部署】
 
-### 纯静态（Web 前端 + Git/SVN）
+### （一）纯静态
 
-### 轻量动态（PHP + SQLite）
+Web 前端 + Git/SVN
 
-### Docker
+### （二）轻量动态
+
+PHP + SQLite
+
+#### 初始化
+
+ 1. 首个注册用户即 **系统管理员**
+ 2. 首个用户只能在 `//localhost` 注册并完成首次登录才能生效
+ 3. 首个用户不生效 将阻止其他任何人注册
+
+### （三）Docker
 
  - 灵雀云镜像 —— https://hub.alauda.cn/repos/techquery/easywiki
 

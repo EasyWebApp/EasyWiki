@@ -6,10 +6,24 @@ require_once('php/EasyLibs.php');
 
 
 
-$_HTTP_Server = new HTTPServer();
+$_HTTP_Server = new HTTPServer(false,  function () {
+    session_set_cookie_params(0, '/', '', FALSE, TRUE);
+
+    session_start();
+
+    return  isset( $_SESSION['UID'] )  ?  $_SESSION  :  null;
+});
 
 $_SQL_DB = new SQLite('EasyWiki');
 
+function iEncrypt($_Raw,  $_Salt = null) {
+    $_Salt = $_Salt  ?  $_Salt  :  (time() + mt_rand(100, mt_getrandmax()));
+
+    return array(
+        'salt'  =>  $_Salt,
+        'code'  =>  md5( "{$_Raw}{$_Salt}" )
+    );
+}
 
 $_HTTP_Server->on('Get',  'search/',  function () {
 
@@ -44,9 +58,9 @@ $_HTTP_Server->on('Get',  'search/',  function () {
             )
         )
     ));
-})->on('Get',  'signUp/',  function () {
+})->on('Post',  'signUp/',  function () {
 
-    global $_SQL_DB;
+    global $_SQL_DB, $_HTTP_Server;
 
     $_SQL_DB->createTable('User', array(
         'UID'       =>  'Integer Primary Key AutoIncrement',
@@ -55,14 +69,14 @@ $_HTTP_Server->on('Get',  'search/',  function () {
         'PassWord'  =>  'Text not Null',
         'Auth'      =>  'Integer default 1',
         'cTime'     =>  'Integer not Null',
-        'mTime'     =>  'Integer default 0'
+        'aTime'     =>  'Integer default 0'
     ));
 
     $_User = $_SQL_DB->query(array(
         'select'  =>  '*',
-        'form'    =>  'User'
+        'from'    =>  'User'
     ));
-    $_IPA = $_SERVER['REMOTE_ADDR'];
+    $_IPA = $_HTTP_Server->requestIPAddress;
     $_Auth = 1;
 
     if (! count($_User)) {
@@ -72,12 +86,18 @@ $_HTTP_Server->on('Get',  'search/',  function () {
             ));
         $_Auth = 0;
     }
-    $_Salt = mt_rand(9, 9);
+
+    if (! filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL))
+        return json_encode(array(
+            'message'  =>  "请填写规范的 Email 地址！"
+        ));
+
+    $_PassWord = iEncrypt( $_POST['password'] );
 
     if (! $_SQL_DB->User->insert(array(
-        'Email'     =>  $_GET['email'],
-        'Salt'      =>  $_Salt,
-        'PassWord'  =>  md5( "{$_GET['password']}{$_Salt}" ),
+        'Email'     =>  $_POST['email'],
+        'Salt'      =>  $_PassWord['salt'],
+        'PassWord'  =>  $_PassWord['code'],
         'Auth'      =>  $_Auth,
         'cTime'     =>  time()
     )))
@@ -85,11 +105,86 @@ $_HTTP_Server->on('Get',  'search/',  function () {
             'message'  =>  "该电邮已注册！"
         ));
 
+    $_SQL_DB->createTable('Profile', array(
+        'UID'       =>  'Integer not Null',
+        'NickName'  =>  'Text not Null',
+        'Gender'    =>  'Integer default 0',
+        'Portrait'  =>  'Text'
+    ));
+
+    $_User = $_SQL_DB->query(array(
+        'select'  =>  'UID',
+        'from'    =>  'User',
+        'where'   =>  "Email = '{$_POST['email']}'"
+    ));
+
+    $_Profile = array_map(
+        function ($_Value) {
+            return  is_array($_Value) ? $_Value[0] : $_Value;
+        },
+        filter_input_array(INPUT_POST, array(
+            'NickName'  =>  FILTER_SANITIZE_STRING,
+            'Gender'    =>  array(
+                'filter'   =>  FILTER_VALIDATE_INT,
+                'options'  =>  array(
+                    'min_range'  =>  0,
+                    'max_range'  =>  2,
+                )
+            ),
+            'Portrait'  =>  FILTER_VALIDATE_URL
+        ))
+    );
+    $_Profile['UID'] = $_User[0]['UID'];
+
+    $_SQL_DB->Profile->insert( $_Profile );
+
     return json_encode(array(
         'message'  =>  "注册成功！请立即登录此账号以激活~"
     ));
 
+})->on('Get',  'logIn/',  function () {
+
+    global $_SQL_DB;
+
+    $_User = $_SQL_DB->query(array(
+        'select'  =>  '*',
+        'from'    =>  'User',
+        'where'   =>  "Email = '{$_GET['email']}'"
+    ));
+
+    if (! count($_User))
+        return json_encode(array(
+            'message'  =>  "该电邮未注册！"
+        ));
+
+    $_PassWord = iEncrypt($_GET['password'], $_User[0]['Salt']);
+
+    if ($_PassWord['code'] != $_User[0]['PassWord'])
+        return json_encode(array(
+            'message'  =>  "密码错误！"
+        ));
+
+    $_UID = $_User[0]['UID'];
+
+    $_SQL_DB->User->update("UID = '{$_UID}'", array(
+        'aTime'  =>  time()
+    ));
+
+    $_Profile = $_SQL_DB->query(array(
+        'select'  =>  '*',
+        'from'    =>  'Profile',
+        'where'   =>  "UID = {$_UID}"
+    ));
+    $_Profile[0]['message'] = "欢迎进入 EasyWiki 的世界！";
+
+    return  json_encode( $_Profile[0] );
+
 })->on('Get',  'spider/',  function () {
+
+    global $_SQL_DB, $_HTTP_Server;
+
+    if (! count(func_get_arg(2)))
+        return $_HTTP_Server->setStatus(403);
 
     //  HTML to MarkDown
     $_Marker = new HTML_MarkDown($_GET['url'], $_GET['selector']);
@@ -105,7 +200,6 @@ $_HTTP_Server->on('Get',  'search/',  function () {
     $_Marker->convertTo("../data/{$_Name}.md");
 
     //  Fetch History
-    global $_SQL_DB;
 
     $_SQL_DB->createTable('Fetch', array(
         'PID'    =>  'Integer Primary Key',

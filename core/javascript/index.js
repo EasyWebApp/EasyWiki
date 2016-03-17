@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.7  (2016-03-16)  Beta
+//      [Version]    v0.7  (2016-03-17)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -86,6 +86,7 @@
                 };
                 break;
             }
+            case 'signUp.html':    $('form', this).pwConfirm();    break;
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
 
@@ -108,7 +109,7 @@
 
         $_Body.addClass('Entry_Content');
 
-        var iTitle = $('h1', this).text();
+        var iTitle = $('h1', this).text() || '';
 
         DOM.title = iTitle + ' - EasyWiki';
 
