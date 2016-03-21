@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.7  (2016-03-17)  Beta
+//      [Version]    v0.8  (2016-03-21)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -87,21 +87,28 @@
                 break;
             }
             case 'signUp.html':    $('form', this).pwConfirm();    break;
-            case 'edit.html':
+            case 'editor.html':
                 ImportJS([
+                    {
+                        'http://cdn.bootcss.com/jquery/2.2.1/jquery.min.js':
+                            $.browser.modern,
+                        'http://cdn.bootcss.com/jquery/1.12.1/jquery.min.js':
+                            (! $.browser.modern)
+                    },
                     'https://pandao.github.io/editor.md/editormd.min.js'
                 ],  function () {
                     editormd('Editor_MD', {
                         path:
                             'https://pandao.github.io/editor.md/lib/',
-                        width:                '100%',
-                        height:               740,
+                        height:               $('#Editor_MD').css('min-height'),
+//                        autoHeight:           true,
                         theme:                'dark',
                         editorTheme:          'pastel-on-dark',
                         previewTheme:         'dark',
                         taskList:             true,
                         htmlDecode:
                             'style,script,frameset,iframe,object,embed|on*',
+                        markdown:             "# （词条名不可少）",
                         syncScrolling:        true,
                         dialogMaskOpacity:    0.5
                     });

@@ -2,19 +2,14 @@
 
 set_time_limit(0);
 
+
+/* ---------- 基础库 ---------- */
+
 require_once('php/EasyLibs.php');
 
-
-
-$_HTTP_Server = new HTTPServer(false,  function () {
-    session_set_cookie_params(0, '/', '', FALSE, TRUE);
-
-    session_start();
-
-    return  isset( $_SESSION['UID'] )  ?  $_SESSION  :  null;
-});
-
-$_SQL_DB = new SQLite('EasyWiki');
+function Local_CharSet($_Raw,  $_Raw_CS = 'UTF-8') {
+    return  iconv($_Raw_CS, ini_get('default_charset'), $_Raw);
+}
 
 function iEncrypt($_Raw,  $_Salt = null) {
     $_Salt = $_Salt  ?  $_Salt  :  (time() + mt_rand(100, mt_getrandmax()));
@@ -25,9 +20,34 @@ function iEncrypt($_Raw,  $_Salt = null) {
     );
 }
 
+/* ---------- 通用逻辑 ---------- */
+
+$_No_Login = array('search', 'category');
+
+$_SQL_DB = new SQLite('EasyWiki');
+
+$_HTTP_Server = new HTTPServer(false,  function ($_Route) {
+    global  $_No_Login, $_SQL_DB;
+
+    if (in_array($_Route[0], $_No_Login))  return;
+
+    $_SQL_DB->createTable('Entry', array(
+        'EID'     =>  'Integer Primary Key AutoIncrement',
+        'Title'   =>  'Text not Null Unique',
+        'AID'     =>  'Integer not Null',
+        'Source'  =>  'Text'
+    ));
+
+    session_set_cookie_params(0, '/', '', FALSE, TRUE);
+
+    session_start();
+});
+
+/* ---------- 业务逻辑 ---------- */
+
 $_HTTP_Server->on('Get',  'search/',  function () {
 
-    $_KeyWord = iconv('UTF-8', ini_get('default_charset'), $_GET['keyword']);
+    $_KeyWord = Local_CharSet( $_GET['keyword'] );
 
     return json_encode(array_map(
         function ($_Path) {
@@ -76,7 +96,7 @@ $_HTTP_Server->on('Get',  'search/',  function () {
         'select'  =>  '*',
         'from'    =>  'User'
     ));
-    $_IPA = $_HTTP_Server->requestIPAddress;
+    $_IPA = $_HTTP_Server->request->IPAddress;
     $_Auth = 1;
 
     if (! count($_User)) {
@@ -164,7 +184,7 @@ $_HTTP_Server->on('Get',  'search/',  function () {
             'message'  =>  "密码错误！"
         ));
 
-    $_UID = $_User[0]['UID'];
+    $_UID = $_SESSION['UID'] = $_User[0]['UID'];
 
     $_SQL_DB->User->update("UID = '{$_UID}'", array(
         'aTime'  =>  time()
@@ -179,30 +199,67 @@ $_HTTP_Server->on('Get',  'search/',  function () {
 
     return  json_encode( $_Profile[0] );
 
-})->on('Get',  'spider/',  function () {
+})->on('Post',  'deliver/',  function () {
+
+    global $_SQL_DB;
+
+    require('php/HyperDown.php');
+
+    //  存文件
+    $_Parser = new HyperDown\Parser;
+
+    $_HTML = $_Parser->makeHtml( $_POST['Source_MD'] );
+
+    $_Marker = new HTML_MarkDown( $_HTML );
+
+    $_Name = Local_CharSet($_Marker->title);
+
+    $_Cache = new FS_File("../data/cache/{$_Name}.html", 'w');
+    $_Cache->write( $_HTML );
+
+    file_put_contents("../data/{$_Name}.md", $_POST['Source_MD']);
+
+    //  存数据
+    $_SQL_DB->Entry->insert(array(
+        'Title'   =>  $_Name,
+        'AID'     =>  $_SESSION['UID']
+    ));
+
+    return json_encode(array(
+        'message'  =>  "词条更新成功！"
+    ));
+
+})->on('Post',  'spider/',  function () {
 
     global $_SQL_DB, $_HTTP_Server;
 
-    if (! count(func_get_arg(2)))
+    if (! count($_SESSION))
         return $_HTTP_Server->setStatus(403);
 
-    //  HTML to MarkDown
-    $_Marker = new HTML_MarkDown($_GET['url'], $_GET['selector']);
+    if (! filter_input(INPUT_POST, 'url', FILTER_VALIDATE_URL))
+        return json_encode(array());
 
-    $_Name = iconv(
-        $_Marker->CharSet,  ini_get('default_charset'),  $_Marker->title
-    );
+    //  HTML to MarkDown
+    $_Marker = new HTML_MarkDown($_POST['url'], $_POST['selector']);
+
+    $_Name = Local_CharSet($_Marker->title, $_Marker->CharSet);
 
     if (empty( $_Name )) {
-        preg_match($_GET['name'], $_GET['url'], $_Name);
+        preg_match($_POST['name'], $_POST['url'], $_Name);
         $_Name = $_Name[1];
     }
     $_Marker->convertTo("../data/{$_Name}.md");
 
+    $_SQL_DB->Entry->insert(array(
+        'Title'   =>  $_Name,
+        'AID'     =>  $_SESSION['UID'],
+        'Source'  =>  $_POST['url']
+    ));
+
     //  Fetch History
 
     $_SQL_DB->createTable('Fetch', array(
-        'PID'    =>  'Integer Primary Key',
+        'PID'    =>  'Integer Primary Key AutoIncrement',
         'URL'    =>  'Text not Null Unique',
         'Times'  =>  'Integer default 0',
         'Title'  =>  "Text default ''"
@@ -213,7 +270,7 @@ $_HTTP_Server->on('Get',  'search/',  function () {
     $_Page = $_SQL_DB->query(array(
         'select'  =>  'PID, URL',
         'from'    =>  'Fetch',
-        'where'   =>  "(URL = '{$_GET['url']}') and (Times = 0)"
+        'where'   =>  "(URL = '{$_POST['url']}') and (Times = 0)"
     ));
 
     if (count( $_Page ))

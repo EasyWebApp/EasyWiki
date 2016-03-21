@@ -2,10 +2,16 @@
 <style>
     #Editor_MD {
         margin-top:    1em;
+        min-height:    600px;
     }
 </style>
 
 <pre name="message"></pre>
 <form target="message" method="POST" action="core/api.php/deliver/">
-    <div id="Editor_MD"></div>
+    <div id="Editor_MD">
+        <textarea name="Source_MD"></textarea>
+    </div>
+    <div class="Row">
+        <input type="submit" />
+    </div>
 </form>

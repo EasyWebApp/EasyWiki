@@ -14,6 +14,8 @@
 
 ## 【版本简史】
 
+**开发进展** —— http://git.oschina.net/Tech_Query/EasyWiki/milestones
+
  - v0.6 Beta —— 2016年3月15日
    - 支持 **词条名搜索**
    - 内置 **爬虫式数据迁移工具**
@@ -36,3 +38,4 @@
  1. https://github.com/SegmentFault/HyperDown
  2. http://phpquery-library.blogspot.com/
  3. http://git.oschina.net/Tech_Query/EasyLibs.php
+ 4. http://git.oschina.net/pandao/editor.md
