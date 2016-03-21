@@ -87,6 +87,25 @@
                 break;
             }
             case 'signUp.html':    $('form', this).pwConfirm();    break;
+            case 'edit.html':
+                ImportJS([
+                    'https://pandao.github.io/editor.md/editormd.min.js'
+                ],  function () {
+                    editormd('Editor_MD', {
+                        path:
+                            'https://pandao.github.io/editor.md/lib/',
+                        width:                '100%',
+                        height:               740,
+                        theme:                'dark',
+                        editorTheme:          'pastel-on-dark',
+                        previewTheme:         'dark',
+                        taskList:             true,
+                        htmlDecode:
+                            'style,script,frameset,iframe,object,embed|on*',
+                        syncScrolling:        true,
+                        dialogMaskOpacity:    0.5
+                    });
+                });
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
 

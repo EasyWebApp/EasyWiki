@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-03-16)  Stable
+//      [Version]    v1.0  (2016-03-21)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -1070,6 +1070,8 @@
         };
 
         return  function () {
+            if (! this[0])  return  arguments.length ? this : 0;
+
             switch ( $.type(this[0]) ) {
                 case 'Document':
                     return  Math.max(
@@ -2127,28 +2129,38 @@
         }
     });
 
+    function Direct_Bind(iType, iCallback) {
+        return  this.data('_event_',  function () {
+            var Event_Data = arguments[1] || { };
+
+            if (! Event_Data[iType]) {
+                Event_Data[iType] = [ ];
+                if ($.browser.modern)
+                    this.addEventListener(iType, Proxy_Handler, false);
+                else if (isOriginalEvent.call({
+                    type:      iType,
+                    target:    this
+                }))
+                    IE_Event.bind.call(this, iType, Proxy_Handler);
+            }
+            Event_Data[iType].push(iCallback);
+
+            return Event_Data;
+        });
+    }
+
     $.fn.extend({
-        bind:              function (iType, iCallback) {
-            iType = iType.trim().split(/\s+/);
+        bind:              function (iType) {
+            iType = (typeof iType == 'string')  ?
+                $.makeSet.apply($, iType.trim().split(/\s+/))  :  iType;
 
-            return  this.data('_event_',  function () {
-                var Event_Data = arguments[1] || { };
+            for (var _Type_ in iType)
+                Direct_Bind.apply(this, [
+                    _Type_,
+                    (iType[_Type_] === true)  ?  arguments[1]  :  iType[_Type_]
+                ]);
 
-                for (var i = 0;  i < iType.length;  i++) {
-                    if (! Event_Data[iType[i]]) {
-                        Event_Data[iType[i]] = [ ];
-                        if ($.browser.modern)
-                            this.addEventListener(iType[i], Proxy_Handler, false);
-                        else if (isOriginalEvent.call({
-                            type:      iType[i],
-                            target:    this
-                        }))
-                            IE_Event.bind.call(this, iType[i], Proxy_Handler);
-                    }
-                    Event_Data[iType[i]].push(iCallback);
-                }
-                return Event_Data;
-            });
+            return this;
         },
         unbind:            function (iType, iCallback) {
             iType = iType.trim().split(/\s+/);
@@ -2279,7 +2291,7 @@
         'abort', 'error',
         'keydown', 'keypress', 'keyup',
         'mousedown', 'mouseup', 'mousemove', 'mousewheel',
-        'click', 'dblclick', 'scroll',
+        'click', 'dblclick', 'scroll', 'resize',
         'select', 'focus', 'blur', 'change', 'submit', 'reset',
         'tap', 'press', 'swipe'
     ))
@@ -3279,7 +3291,10 @@
                     (typeof iCallback == 'function')  &&
                     (false === iCallback.call(
                         $_iFrame[0],  $($.merge(
-                            $.makeArray( $('head style', _DOM_) ),  $_Content
+                            $.makeArray($(
+                                'head style, head link[rel="stylesheet"]',  _DOM_
+                            )),
+                            $_Content
                         ))
                     ))
                 )
