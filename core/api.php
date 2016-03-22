@@ -212,7 +212,12 @@ $_HTTP_Server->on('Get',  'search/',  function () {
 
     $_Marker = new HTML_MarkDown( $_HTML );
 
-    $_Name = Local_CharSet($_Marker->title);
+    $_Name = filter_input(INPUT_POST, 'title', FILTER_VALIDATE_REGEXP, array(
+        'options'  =>  array(
+            'regexp'  =>  '/^[^\\/:\*\?"<>\|\.]{1,20}$/'
+        )
+    ))  ?
+        $_POST['title']  :  Local_CharSet( $_Marker->title );
 
     $_Cache = new FS_File("../data/cache/{$_Name}.html", 'w');
     $_Cache->write( $_HTML );

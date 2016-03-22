@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.8  (2016-03-21)  Beta
+//      [Version]    v0.8  (2016-03-22)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -12,7 +12,9 @@
 //
 //                   EasyWebApp  v2.3+,
 //
-//                   jQuery-QRcode  v0.12+
+//                   jQuery-QRcode  v0.12+,
+//
+//                   Editor.md  v1.5+
 //
 //
 //            (C)2016    shiy2008@gmail.com
@@ -67,6 +69,53 @@
         return  (new Date(UTS * 1000)).toLocaleString();
     }
 
+    function Load_Editor(MD_URL) {
+        var iCDN = 'https://pandao.github.io/editor.md/',
+            iReady = MD_URL ? 2 : 1,
+            iMarkDown;
+
+        function Editor_Init() {
+            if (--iReady > 0) {
+                if (MD_URL  &&  (typeof arguments[0] == 'string'))
+                    iMarkDown = arguments[0];
+                return;
+            }
+            editormd('Editor_MD', {
+                path:                 iCDN + 'lib/',
+//                autoLoadModules:      false,
+                height:               $('#Editor_MD').css('min-height'),
+//                autoHeight:           true,
+                theme:                'dark',
+                editorTheme:          'pastel-on-dark',
+                previewTheme:         'dark',
+                taskList:             true,
+                htmlDecode:
+                    'style,script,frameset,iframe,object,embed|on*',
+                markdown:             iMarkDown  ||  "# （词条名不可少）",
+                pageBreak:            false,
+                emoji:                true,
+                syncScrolling:        true,
+                dialogMaskOpacity:    0.5
+            });
+        }
+
+        if (MD_URL)  $.get(MD_URL, Editor_Init);
+
+        ImportJS('http://cdn.bootcss.com/', [
+            {
+                'jquery/2.2.1/jquery.min.js':     $.browser.modern,
+                'jquery/1.12.1/jquery.min.js':    (! $.browser.modern)
+            },/*
+            [
+                'codemirror/5.12.0/codemirror.min.js',
+                iCDN + 'lib/codemirror/modes.min.js',
+                iCDN + 'lib/codemirror/addons.min.js',
+                'prettify/r298/prettify.min.js'
+            ],*/
+            iCDN + 'editormd.min.js'
+        ], Editor_Init);
+    }
+
     $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
             _PP_ = $.fileName(Prev_Page.HTML);
@@ -88,31 +137,15 @@
             }
             case 'signUp.html':    $('form', this).pwConfirm();    break;
             case 'editor.html':
-                ImportJS([
-                    {
-                        'http://cdn.bootcss.com/jquery/2.2.1/jquery.min.js':
-                            $.browser.modern,
-                        'http://cdn.bootcss.com/jquery/1.12.1/jquery.min.js':
-                            (! $.browser.modern)
-                    },
-                    'https://pandao.github.io/editor.md/editormd.min.js'
-                ],  function () {
-                    editormd('Editor_MD', {
-                        path:
-                            'https://pandao.github.io/editor.md/lib/',
-                        height:               $('#Editor_MD').css('min-height'),
-//                        autoHeight:           true,
-                        theme:                'dark',
-                        editorTheme:          'pastel-on-dark',
-                        previewTheme:         'dark',
-                        taskList:             true,
-                        htmlDecode:
-                            'style,script,frameset,iframe,object,embed|on*',
-                        markdown:             "# （词条名不可少）",
-                        syncScrolling:        true,
-                        dialogMaskOpacity:    0.5
-                    });
-                });
+                if (_TP_ != _PP_) {
+                    Load_Editor(iData.modify && Prev_Page.HTML);
+
+                    $('form input[name="title"]', this).attr({
+                        readonly:    true,
+                        title:       "已存在的词条不能改名"
+                    })[0].value = _PP_.split('.')[0];
+                }
+                break;
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
 
@@ -129,11 +162,11 @@
             }
         }
         if (_TP_.slice(-3) != '.md') {
-            $_Body.removeClass('Entry_Content');
+            $_Body.addClass('Not_Entry');
             return iData;
         }
 
-        $_Body.addClass('Entry_Content');
+        $_Body.removeClass('Not_Entry');
 
         var iTitle = $('h1', this).text() || '';
 
@@ -156,6 +189,9 @@
             return arguments[1];
         });
     }).on('pageReady',  function () {
+
+        if ( $_Body.hasClass('Not_Entry') )
+            return iMainNav.unit.clear();
 
         iMainNav.bind(
             $('h1, h2, h3', this),

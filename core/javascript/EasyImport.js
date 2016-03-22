@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-03-21)  Stable
+//      [Version]    v1.0  (2016-03-22)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -2419,20 +2419,26 @@
 
             var swipeLeft = Touch_Data.pX - iTouch.pageX,
                 swipeTop = Touch_Data.pY - iTouch.pageY,
-                iTime = iEvent.timeStamp - Touch_Data.time;
+                iDuring = iEvent.timeStamp - Touch_Data.time;
 
             var iShift = Math.sqrt(
                     Math.pow(swipeLeft, 2)  +  Math.pow(swipeTop, 2)
-                );
+                ),
+                _Event_;
 
-            $(iEvent.target).trigger((iShift < 22)  ?
-                ((iTime > 300) ? 'press' : 'tap')  :  {
+            if (iDuring > 300)
+                _Event_ = 'press';
+            else if (iShift < 22)
+                _Event_ = 'tap';
+            else
+                _Event_ = {
                     type:      'swipe',
                     deltaX:    swipeLeft,
                     deltaY:    swipeTop,
                     detail:    iShift
-                }
-            );
+                };
+
+            $(iEvent.target).trigger(_Event_);
         }
     );
     /* ----- Text Input Event ----- */

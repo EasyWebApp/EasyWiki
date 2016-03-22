@@ -41,7 +41,7 @@
             $_Link.attr('href', 'data/index.md').appendTo('head');
     </script>
 </head><body class="Grid-Row">
-    <ul id="Main_Nav" class="Grid-Column Column_1-6 No_Select">
+    <ul id="Main_Nav" class="Grid-Column Column_1-6 No_Select Entry_Only">
         <li>
             <a class="Ellipsis" rel="nofollow" href="#"></a>
         </li>
@@ -51,11 +51,14 @@
             <h1 class="Grid-Column No_Mobile" target="_self" href="#_About">
                 EasyWiki
             </h1>
-            <div class="Grid-Column No_Mobile">
-                <div class="DropDown Head" id="QRcode">
+            <div class="Grid-Column No_Mobile Entry_Only">
+                <span class="DropDown Head" id="QRcode">
                     <i class="Icon Mobile"></i>
                     <div class="DropDown Body"></div>
-                </div>
+                </span>
+                <i class="Icon Pen" title="编辑"
+                   target="_self" href="core/html/editor.html?modify=true">
+                </i>
             </div>
             <form class="Grid-Column"
                   target="_self" action="core/api.php/search/"

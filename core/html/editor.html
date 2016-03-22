@@ -1,4 +1,10 @@
-<link rel="stylesheet" href="core/EditorMD/EditorMD.css" />
+<!--
+<link rel="stylesheet" type="text/css" href="http://cdn.bootcss.com/codemirror/5.12.0/codemirror.min.css" />
+<link rel="stylesheet" type="text/css" href="http://cdn.bootcss.com/codemirror/5.12.0/addon/dialog/dialog.min.css" />
+<link rel="stylesheet" type="text/css" href="http://cdn.bootcss.com/codemirror/5.12.0/addon/search/matchesonscrollbar.min.css" />
+<link rel="stylesheet" type="text/css" href="http://cdn.bootcss.com/codemirror/5.12.0/theme/pastel-on-dark.min.css" />
+-->
+<link rel="stylesheet" type="text/css" href="core/EditorMD/EditorMD.css" />
 <style>
     #Editor_MD {
         margin-top:    1em;
@@ -8,6 +14,12 @@
 
 <pre name="message"></pre>
 <form target="message" method="POST" action="core/api.php/deliver/">
+    <div class="Row">
+        <label for="">词条名</label>
+        <input type="text" name="title" required
+               pattern='^[^\\/:\*\?"<>\|\.]{1,20}$'
+               placeholder="将作为 MarkDown 文件名" />
+    </div>
     <div id="Editor_MD">
         <textarea name="Source_MD"></textarea>
     </div>

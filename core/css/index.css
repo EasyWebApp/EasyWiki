@@ -5,6 +5,9 @@ html, body {
 .InnerPage {
     display:    none;
 }
+.Not_Entry .Entry_Only {
+    display:    none;
+}
 
 
 #Main_Nav {
@@ -68,12 +71,6 @@ html, body {
 }
 #User_Bar > .Grid-Column {
     padding:    0.5em;
-}
-#QRcode {
-    display:    none;
-}
-.Entry_Content #QRcode {
-    display:    block;
 }
 #UserInfo {
     float:        right;
