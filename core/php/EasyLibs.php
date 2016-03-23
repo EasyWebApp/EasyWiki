@@ -3,7 +3,7 @@
 //                >>>  EasyLibs.php  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-21)  Stable
+//      [Version]    v2.3  (2016-03-23)  Stable
 //
 //      [Require]    PHP v5.3+
 //
@@ -874,8 +874,13 @@ class HTML_MarkDown extends HTMLConverter {
                 return  '![' . $_DOM->attr('alt') . '](' . $_DOM->attr('src') .
                     $_This->getTitleAttr($_DOM) . ')';
             },
-            'hr'                      =>  function () {
-                return  "\n\n---\n\n";
+            'hr'                      =>  function ($_HTML, $_DOM) {
+                return  "\n\n" . (
+                    preg_match(
+                        '/page-break-after:\s*always/i', $_DOM->attr('style')
+                    ) ?
+                        '[========]' : '---'
+                ) . "\n\n";
             },
             'p'                       =>  function ($_HTML) {
                 return  "\n\n{$_HTML}\n\n";

@@ -22,7 +22,7 @@ function iEncrypt($_Raw,  $_Salt = null) {
 
 /* ---------- 通用逻辑 ---------- */
 
-$_No_Login = array('search', 'category');
+$_No_Login = array('entry', 'category');
 
 $_SQL_DB = new SQLite('EasyWiki');
 
@@ -33,19 +33,20 @@ $_HTTP_Server = new HTTPServer(false,  function ($_Route) {
 
     $_SQL_DB->createTable('Entry', array(
         'EID'     =>  'Integer Primary Key AutoIncrement',
+        'Type'    =>  'Integer default 0',
         'Title'   =>  'Text not Null Unique',
         'AID'     =>  'Integer not Null',
         'Source'  =>  'Text'
     ));
 
-    session_set_cookie_params(0, '/', '', FALSE, TRUE);
+    session_set_cookie_params(172800, '/', '', FALSE, TRUE);
 
     session_start();
 });
 
 /* ---------- 业务逻辑 ---------- */
 
-$_HTTP_Server->on('Get',  'search/',  function () {
+$_HTTP_Server->on('Get',  'entry/',  function () {
 
     $_KeyWord = Local_CharSet( $_GET['keyword'] );
 
@@ -78,7 +79,7 @@ $_HTTP_Server->on('Get',  'search/',  function () {
             )
         )
     ));
-})->on('Post',  'signUp/',  function () {
+})->on('Post',  'user/',  function () {
 
     global $_SQL_DB, $_HTTP_Server;
 
@@ -162,7 +163,7 @@ $_HTTP_Server->on('Get',  'search/',  function () {
         'message'  =>  "注册成功！请立即登录此账号以激活~"
     ));
 
-})->on('Get',  'logIn/',  function () {
+})->on('Post',  'online/',  function () {
 
     global $_SQL_DB;
 
@@ -199,7 +200,7 @@ $_HTTP_Server->on('Get',  'search/',  function () {
 
     return  json_encode( $_Profile[0] );
 
-})->on('Post',  'deliver/',  function () {
+})->on('Post',  'entry/',  function () {
 
     global $_SQL_DB;
 

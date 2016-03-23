@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.8  (2016-03-22)  Beta
+//      [Version]    v0.8  (2016-03-23)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -92,7 +92,6 @@
                 htmlDecode:
                     'style,script,frameset,iframe,object,embed|on*',
                 markdown:             iMarkDown  ||  "# （词条名不可少）",
-                pageBreak:            false,
                 emoji:                true,
                 syncScrolling:        true,
                 dialogMaskOpacity:    0.5
@@ -138,12 +137,15 @@
             case 'signUp.html':    $('form', this).pwConfirm();    break;
             case 'editor.html':
                 if (_TP_ != _PP_) {
-                    Load_Editor(iData.modify && Prev_Page.HTML);
+                    if (iData.modify) {
+                        Load_Editor( Prev_Page.HTML );
 
-                    $('form input[name="title"]', this).attr({
-                        readonly:    true,
-                        title:       "已存在的词条不能改名"
-                    })[0].value = _PP_.split('.')[0];
+                        $('form input[name="title"]', this).attr({
+                            readonly:    true,
+                            title:       "已存在的词条不能改名"
+                        })[0].value = _PP_.split('.')[0];
+                    } else
+                        Load_Editor();
                 }
                 break;
             case 'spider.html':    {

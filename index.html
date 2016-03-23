@@ -56,12 +56,14 @@
                     <i class="Icon Mobile"></i>
                     <div class="DropDown Body"></div>
                 </span>
+                <i class="Icon" title="创建"
+                   target="_self" href="core/html/editor.html">+</i>
                 <i class="Icon Pen" title="编辑"
                    target="_self" href="core/html/editor.html?modify=true">
                 </i>
             </div>
             <form class="Grid-Column"
-                  target="_self" action="core/api.php/search/"
+                  target="_self" action="core/api.php/entry/"
                   href="core/html/search.html">
                 <input type="text" name="keyword" placeholder="全文搜索" />
             </form>
@@ -73,9 +75,6 @@
                         <li>账号设置</li>
                         <li class="Red">退出系统</li>
                         <li class="Separator"></li>
-                        <li target="_self" href="core/html/editor.html">
-                            创建词条
-                        </li>
                         <li target="_self" href="core/html/spider.html">
                             词条导入
                         </li>
@@ -95,7 +94,8 @@
             </p>
         </div>
         <div class="InnerPage" id="_Login">
-            <form class="CenterX" target="message" action="core/api.php/logIn/">
+            <form class="CenterX" target="message"
+                  method="POST" action="core/api.php/online/">
                 <h2>欢迎维基人！</h2>
                 <pre name="message"></pre>
                 <div class="Row CenterX">

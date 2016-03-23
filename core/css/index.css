@@ -111,3 +111,11 @@ form [multiple] input[type="radio"] {
 table td.Background-Image {
     border:    0.5em  solid  transparent;
 }
+
+
+/* ---------- 打印样式 ---------- */
+@media print {
+    #Main_Nav, #User_Bar {
+        display:    none;
+    }
+}
