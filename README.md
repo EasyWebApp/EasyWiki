@@ -16,7 +16,7 @@
 
 **开发进展** —— http://git.oschina.net/Tech_Query/EasyWiki/milestones
 
- - v0.8 Beta —— 2016年3月22日
+ - v0.8 Beta —— 2016年3月24日
    - 新增 **用户系统**
    - 新增 **Web 词条编辑器**
  - v0.6 Beta —— 2016年3月15日

@@ -20,16 +20,6 @@ function iEncrypt($_Raw,  $_Salt = null) {
     );
 }
 
-function New_Entry($_Name,  $_MarkDown,  $_URL = null) use ($_SQL_DB) {
-    file_put_contents("../data/{$_Name}.md", $_MarkDown);
-
-    $_SQL_DB->Entry->insert(array(
-        'Title'   =>  $_Name,
-        'AID'     =>  $_SESSION['UID'],
-        'Source'  =>  $_URL
-    ));
-}
-
 /* ---------- 通用逻辑 ---------- */
 
 $_No_Login = array('entry', 'category');
@@ -79,6 +69,18 @@ $_HTTP_Server = new HTTPServer(false,  function ($_Route) {
 
     return $_User;
 });
+
+function New_Entry($_Name,  $_MarkDown,  $_URL = null) {
+    global $_SQL_DB;
+
+    file_put_contents("../data/{$_Name}.md", $_MarkDown);
+
+    $_SQL_DB->Entry->insert(array(
+        'Title'   =>  $_Name,
+        'AID'     =>  $_SESSION['UID'],
+        'Source'  =>  $_URL
+    ));
+}
 
 /* ---------- 业务逻辑 ---------- */
 
@@ -241,12 +243,13 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
     $_Marker = new HTML_MarkDown( $_Parser->makeHtml( $_POST['Source_MD'] ) );
 
-    $_Name = filter_input(INPUT_POST, 'title', FILTER_VALIDATE_REGEXP, array(
-        'options'  =>  array(
-            'regexp'  =>  '/^[^\\/:\*\?"<>\|\.]{1,20}$/'
-        )
-    ))  ?
-        $_POST['title']  :  Local_CharSet( $_Marker->title );
+    $_Name = Local_CharSet(
+        filter_input(INPUT_POST, 'title', FILTER_VALIDATE_REGEXP, array(
+            'options'  =>  array(
+                'regexp'  =>  '/^[^\\/:\*\?"<>\|\.]{1,20}$/'
+            )
+        ))  ?  $_POST['title']  :  $_Marker->title
+    );
 
     New_Entry($_Name, $_POST['Source_MD']);
 
@@ -282,12 +285,14 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         'Times'  =>  'Integer default 0',
         'Title'  =>  "Text default ''"
     ));
-    foreach ($_Marker->link['inner'] as $_Link)
+    foreach ($_Marker->link['inner'] as $_Link) {
+        $_Title = trim( $_Link->getAttribute('title') );
+
         $_SQL_DB->Fetch->insert(array(
             'URL'    =>  $_Link->getAttribute('href'),
-            'Title'  =>  $_Link->textContent
+            'Title'  =>  $_Title ? $_Title : $_Link->textContent
         ));
-
+    }
     $_SQL_DB->Fetch->update("URL = '{$_POST['url']}'", array(
         'Times'  =>  1
     ));
