@@ -3,7 +3,7 @@
 //                >>>  EasyLibs.php  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-23)  Stable
+//      [Version]    v2.3  (2016-03-24)  Stable
 //
 //      [Require]    PHP v5.3+
 //
@@ -754,23 +754,7 @@ abstract class HTMLConverter {
     public $DOM;
     public $content;
     public $title;
-    public $link = array(
-        'inner'  =>  array(),
-        'outer'  =>  array()
-    );
     public $rule;
-
-    public function innerLink($_URL) {
-        $_URL = preg_replace('/^\/([^\/])/', '$1', $_URL);
-        $_Host = parse_url($_URL, PHP_URL_HOST);
-
-        if (empty( $_Host ))
-            return  parse_url($this->URL, PHP_URL_SCHEME) .
-                ":{$this->domain}/{$_URL}";
-
-        if (self::getURLDomain($_URL) == $this->domain)
-            return $_URL;
-    }
 
     public function __construct($_URL,  $_Selector = null,  $_Rule) {
         if (substr(trim($_URL), 0, 1) != '<') {
@@ -794,21 +778,48 @@ abstract class HTMLConverter {
         $_Title = $_Title->size() ? $_Title : $this->content['h1'];
         $this->title = $_Title->text();
 
-        foreach ($this->content['a[href]'] as $_Link) {
-            $_HREF = $_Link->getAttribute('href');
-
-            if ($_HREF[0] != '#') {
-                $_InnerURL = $this->innerLink($_HREF);
-                array_push(
-                    $this->link[$_InnerURL ? 'inner' : 'outer'],
-                    $_InnerURL ? $_InnerURL : $_HREF
-                );
-            }
-        }
         $this->rule = $_Rule;
     }
 
-    public function convertTo($_File = null) {
+    private $link = array();
+
+    private function innerLink($_URL) {
+        $_URL = preg_replace('/^\/([^\/])/', '$1', $_URL);
+        $_Host = parse_url($_URL, PHP_URL_HOST);
+
+        if (empty( $_Host ))
+            return  parse_url($this->URL, PHP_URL_SCHEME) .
+                ":{$this->domain}/{$_URL}";
+
+        if (self::getURLDomain($_URL) == $this->domain)
+            return $_URL;
+    }
+
+    public function __get($_Name) {
+        if ($_Name != 'link')  return;
+
+        if (empty( $this->link )) {
+            $this->link = array(
+                'inner'  =>  array(),
+                'outer'  =>  array()
+            );
+            foreach ($this->content['a[href]'] as $_Link) {
+                $_HREF = $_Link->getAttribute('href');
+                if ($_HREF[0] == '#')  continue;
+
+                $_InnerURL = $this->innerLink($_HREF);
+
+                if ($_InnerURL) {
+                    $_Link->setAttribute('href', $_InnerURL);
+                    array_push($this->link['inner'], $_Link);
+                } else
+                    array_push($this->link['outer'], $_Link);
+            }
+        }
+        return $this->link;
+    }
+
+    public function convert() {
         $_Target = array();
 
         foreach ($this->rule  as  $_Selector => $_Callback)
@@ -830,10 +841,7 @@ abstract class HTMLConverter {
                     break;
                 }*/
         }
-        $_Text = trim( $this->content->text() );
-
-        return  is_string( $_File )  ?
-            file_put_contents($_File, $_Text)  :  $_Text;
+        return  trim( $this->content->text() );
     }
 }
 

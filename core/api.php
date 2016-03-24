@@ -20,6 +20,16 @@ function iEncrypt($_Raw,  $_Salt = null) {
     );
 }
 
+function New_Entry($_Name,  $_MarkDown,  $_URL = null) use ($_SQL_DB) {
+    file_put_contents("../data/{$_Name}.md", $_MarkDown);
+
+    $_SQL_DB->Entry->insert(array(
+        'Title'   =>  $_Name,
+        'AID'     =>  $_SESSION['UID'],
+        'Source'  =>  $_URL
+    ));
+}
+
 /* ---------- 通用逻辑 ---------- */
 
 $_No_Login = array('entry', 'category');
@@ -39,9 +49,35 @@ $_HTTP_Server = new HTTPServer(false,  function ($_Route) {
         'Source'  =>  'Text'
     ));
 
-    session_set_cookie_params(172800, '/', '', FALSE, TRUE);
+    $_SQL_DB->createTable('User', array(
+        'UID'       =>  'Integer Primary Key AutoIncrement',
+        'Email'     =>  'Text not Null Unique',
+        'Salt'      =>  'Integer not Null',
+        'PassWord'  =>  'Text not Null',
+        'Auth'      =>  'Integer default 1',
+        'cTime'     =>  'Integer not Null',
+        'aTime'     =>  'Integer default 0'
+    ));
+
+    $_User = $_SQL_DB->query(array(
+        'select'  =>  '*',
+        'from'    =>  'User'
+    ));
+    switch (count( $_User )) {
+        case 0:     ;
+        case 1:     {
+            $_TimeOut = 0;
+            if (empty( $_User[0])  ||  (! $_User[0]['aTime']))
+                break;
+        }
+        default:    $_TimeOut = 172800;
+    }
+
+    session_set_cookie_params($_TimeOut, '/', '', FALSE, TRUE);
 
     session_start();
+
+    return $_User;
 });
 
 /* ---------- 业务逻辑 ---------- */
@@ -83,20 +119,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
     global $_SQL_DB, $_HTTP_Server;
 
-    $_SQL_DB->createTable('User', array(
-        'UID'       =>  'Integer Primary Key AutoIncrement',
-        'Email'     =>  'Text not Null Unique',
-        'Salt'      =>  'Integer not Null',
-        'PassWord'  =>  'Text not Null',
-        'Auth'      =>  'Integer default 1',
-        'cTime'     =>  'Integer not Null',
-        'aTime'     =>  'Integer default 0'
-    ));
-
-    $_User = $_SQL_DB->query(array(
-        'select'  =>  '*',
-        'from'    =>  'User'
-    ));
+    $_User = func_get_arg(2);
     $_IPA = $_HTTP_Server->request->IPAddress;
     $_Auth = 1;
 
@@ -155,7 +178,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             'Portrait'  =>  FILTER_VALIDATE_URL
         ))
     );
-    $_Profile['UID'] = $_User[0]['UID'];
+    $_Profile['UID'] = $_SESSION['UID'] = $_User[0]['UID'];
 
     $_SQL_DB->Profile->insert( $_Profile );
 
@@ -170,7 +193,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
     $_User = $_SQL_DB->query(array(
         'select'  =>  '*',
         'from'    =>  'User',
-        'where'   =>  "Email = '{$_GET['email']}'"
+        'where'   =>  "Email = '{$_POST['email']}'"
     ));
 
     if (! count($_User))
@@ -178,13 +201,23 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             'message'  =>  "该电邮未注册！"
         ));
 
-    $_PassWord = iEncrypt($_GET['password'], $_User[0]['Salt']);
+    $_PassWord = iEncrypt($_POST['password'], $_User[0]['Salt']);
 
     if ($_PassWord['code'] != $_User[0]['PassWord'])
         return json_encode(array(
             'message'  =>  "密码错误！"
         ));
 
+    if (
+        ($_User[0]['UID'] === 0)  &&
+        ($_User[0]['aTime'] === 0)  &&
+        (! isset( $_SESSION['UID'] ))
+    ) {
+        $_SQL_DB->User->delete("UID = {$_User[0]['UID']}");
+        return json_encode(array(
+            'message'  =>  "管理员账号未及时登录，系统初始化失败，须重新注册管理员！"
+        ));
+    }
     $_UID = $_SESSION['UID'] = $_User[0]['UID'];
 
     $_SQL_DB->User->update("UID = '{$_UID}'", array(
@@ -202,16 +235,11 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
 })->on('Post',  'entry/',  function () {
 
-    global $_SQL_DB;
-
     require('php/HyperDown.php');
 
-    //  存文件
     $_Parser = new HyperDown\Parser;
 
-    $_HTML = $_Parser->makeHtml( $_POST['Source_MD'] );
-
-    $_Marker = new HTML_MarkDown( $_HTML );
+    $_Marker = new HTML_MarkDown( $_Parser->makeHtml( $_POST['Source_MD'] ) );
 
     $_Name = filter_input(INPUT_POST, 'title', FILTER_VALIDATE_REGEXP, array(
         'options'  =>  array(
@@ -220,16 +248,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
     ))  ?
         $_POST['title']  :  Local_CharSet( $_Marker->title );
 
-    $_Cache = new FS_File("../data/cache/{$_Name}.html", 'w');
-    $_Cache->write( $_HTML );
-
-    file_put_contents("../data/{$_Name}.md", $_POST['Source_MD']);
-
-    //  存数据
-    $_SQL_DB->Entry->insert(array(
-        'Title'   =>  $_Name,
-        'AID'     =>  $_SESSION['UID']
-    ));
+    New_Entry($_Name, $_POST['Source_MD']);
 
     return json_encode(array(
         'message'  =>  "词条更新成功！"
@@ -254,16 +273,9 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         preg_match($_POST['name'], $_POST['url'], $_Name);
         $_Name = $_Name[1];
     }
-    $_Marker->convertTo("../data/{$_Name}.md");
-
-    $_SQL_DB->Entry->insert(array(
-        'Title'   =>  $_Name,
-        'AID'     =>  $_SESSION['UID'],
-        'Source'  =>  $_POST['url']
-    ));
+    New_Entry($_Name, $_Marker->convert(), $_POST['url']);
 
     //  Fetch History
-
     $_SQL_DB->createTable('Fetch', array(
         'PID'    =>  'Integer Primary Key AutoIncrement',
         'URL'    =>  'Text not Null Unique',
@@ -271,25 +283,21 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         'Title'  =>  "Text default ''"
     ));
     foreach ($_Marker->link['inner'] as $_Link)
-        $_SQL_DB->Fetch->insert(array('URL' => $_Link));
-
-    $_Page = $_SQL_DB->query(array(
-        'select'  =>  'PID, URL',
-        'from'    =>  'Fetch',
-        'where'   =>  "(URL = '{$_POST['url']}') and (Times = 0)"
-    ));
-
-    if (count( $_Page ))
-        $_SQL_DB->Fetch->update("PID = {$_Page[0]['PID']}", array(
-            'Times'  =>  1
+        $_SQL_DB->Fetch->insert(array(
+            'URL'    =>  $_Link->getAttribute('href'),
+            'Title'  =>  $_Link->textContent
         ));
+
+    $_SQL_DB->Fetch->update("URL = '{$_POST['url']}'", array(
+        'Times'  =>  1
+    ));
 
     return array(
         'header'    =>    array(
             'Content-Type'  =>  'application/json'
         ),
         'data'      =>    $_SQL_DB->query(array(
-            'select'  =>  'URL',
+            'select'  =>  'URL, Title',
             'from'    =>  'Fetch',
             'where'   =>  'Times = 0'
         ))
