@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.3  (2016-02-22)  Stable
+//      [Version]    v2.3  (2016-03-25)  Stable
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -37,16 +37,18 @@
             case '_self':     ;
             default:          if (this.href)  this.type = 'Inner';
         }
-        this.href = this.href || this.app.history.last().HTML;
         this.method = (this.method || 'Get').toLowerCase();
+        this.data = { };
+        this.href = this.href || this.app.history.last().HTML;
+        this.href = this.getURL('href');
 
         var iFileName = $.fileName( this.href ).split('.');
 
-        this.data = {
+        $.extend(this.data, {
             _File_Path_:    $.filePath( this.href ),
             _File_Name_:    iFileName[0],
             _Ext_Name_:     iFileName[1]
-        };
+        });
 
         if ((this.href || '').indexOf('?')  >  -1)
             this.data = $.extend($.paramJSON(this.href), this.data);
@@ -89,6 +91,29 @@
             return  this.data = $.extend(
                 iData.EWA_Model || iData.LV_Model || { },  this.data
             );
+        },
+        getArgs:      function () {
+            var This_App = this.app,  iData = this.getData();
+
+            return  $.map(this.$_DOM[0].dataset,  function (iName) {
+                var _Arg_ = iData[iName] || This_App.dataStack.value(iName);
+
+                return  (_Arg_ !== undefined)  ?  _Arg_  :  iName;
+            });
+        },
+        getURL:       function (iKey) {
+            if (! this[iKey])  return '';
+
+            if ((iKey != 'href')  ||  (this[iKey][0] != '#')) {
+                this[iKey] = this.app.makeURL(
+                    this[iKey] || '',
+                    this.getData(),
+                    this.method.match(/Get|Delete/i)  &&  this.getArgs()
+                );
+                if ((iKey == 'href')  &&  (this[iKey].slice(-1) == '?'))
+                    this[iKey] = this[iKey].slice(0, -1);
+            }
+            return this[iKey];
         },
         valueOf:      function () {
             return {
@@ -339,7 +364,7 @@
         var This_App = this,
             URL_Param = $.param(
                 $.extend(iArgs || { },  $.paramJSON(
-                    iURL[1].replace(iJSONP + '=?',  '')
+                    '?'  +  iURL[1].replace(iJSONP + '=?',  '')
                 ))
             );
         iURL = [
@@ -368,29 +393,6 @@
         getTarget:    function () {
             return  this.target.match(/^_(self|blank)$/) ?
                 this.app.domRoot  :  $('[name="' + this.target + '"]');
-        },
-        getArgs:      function () {
-            var This_App = this.app,  iData = this.getData();
-
-            return  $.map(this.$_DOM[0].dataset,  function (iName) {
-                var _Arg_ = iData[iName] || This_App.dataStack.value(iName);
-
-                return  (_Arg_ !== undefined)  ?  _Arg_  :  iName;
-            });
-        },
-        getURL:       function (iKey) {
-            if (! this[iKey])  return '';
-
-            if ((iKey != 'href')  ||  (this[iKey][0] != '#')) {
-                this[iKey] = this.app.makeURL(
-                    this[iKey] || '',
-                    this.getData(),
-                    this.method.match(/Get|Delete/i)  &&  this.getArgs()
-                );
-                if ((iKey == 'href')  &&  (this[iKey].slice(-1) == '?'))
-                    this[iKey] = this[iKey].slice(0, -1);
-            }
-            return this[iKey];
         },
         prefetch:     function () {
             if ((this.target == '_self')  &&  this.href) {
@@ -486,7 +488,7 @@
                 });
         },
         load:    function (iLink, Page_Load) {
-            var MarkDown_File = /\.(md|markdown)$/i,
+            var MarkDown_File = /\.(md|markdown)\??/i,
                 This_Page = this,  This_App = this.ownerApp;
 
             if (iLink.href[0] == '#') {

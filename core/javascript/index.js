@@ -75,11 +75,10 @@
             iMarkDown;
 
         function Editor_Init() {
-            if (--iReady > 0) {
-                if (MD_URL  &&  (typeof arguments[0] == 'string'))
-                    iMarkDown = arguments[0];
-                return;
-            }
+            if (MD_URL  &&  (typeof arguments[0] == 'string'))
+                iMarkDown = arguments[0];
+            if (--iReady > 0)  return;
+
             editormd('Editor_MD', {
                 path:                 iCDN + 'lib/',
 //                autoLoadModules:      false,
@@ -93,12 +92,19 @@
                     'style,script,frameset,iframe,object,embed|on*',
                 markdown:             iMarkDown  ||  "# （词条名不可少）",
                 emoji:                true,
+                imageUpload:          true,
+                imageFormats:         [
+                    'jpg', 'jpeg', 'gif', 'png', 'bmp', 'webp'
+                ],
+                imageUploadURL:       'core/api.php/image/',
                 syncScrolling:        true,
                 dialogMaskOpacity:    0.5
             });
         }
 
         if (MD_URL)  $.get(MD_URL, Editor_Init);
+
+        if (BOM.iQuery !== BOM.jQuery)  return Editor_Init();
 
         ImportJS('http://cdn.bootcss.com/', [
             {
@@ -135,19 +141,6 @@
                 break;
             }
             case 'signUp.html':    $('form', this).pwConfirm();    break;
-            case 'editor.html':
-                if (_TP_ != _PP_) {
-                    if (iData.modify) {
-                        Load_Editor( Prev_Page.HTML );
-
-                        $('form input[name="title"]', this).attr({
-                            readonly:    true,
-                            title:       "已存在的词条不能改名"
-                        })[0].value = _PP_.split('.')[0];
-                    } else
-                        Load_Editor();
-                }
-                break;
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
 
@@ -192,6 +185,26 @@
         });
     }).on('pageReady',  function () {
 
+        var _TP_ = $.fileName( arguments[2].HTML ),
+            _PP_ = $.fileName( arguments[3].HTML ),
+            TP_Param = $.paramJSON( arguments[2].HTML );
+
+        switch (_TP_) {
+            case 'editor.html':    if (_TP_ != _PP_) {
+                if (TP_Param.modify) {
+                    Load_Editor( arguments[3].HTML );
+
+                    $('form input[name="title"]', this).attr({
+                        readonly:    true,
+                        title:       "已存在的词条不能改名"
+                    })[0].value = _PP_.split('.')[0];
+                } else
+                    Load_Editor();
+
+                $('form input[name="type"]', this)[0].value =
+                    TP_Param.category ? 1 : 0;
+            }
+        }
         if ( $_Body.hasClass('Not_Entry') )
             return iMainNav.unit.clear();
 

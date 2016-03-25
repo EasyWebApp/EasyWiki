@@ -3,7 +3,7 @@
 //                >>>  EasyLibs.php  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-24)  Stable
+//      [Version]    v2.3  (2016-03-25)  Stable
 //
 //      [Require]    PHP v5.3+
 //
@@ -319,39 +319,39 @@ class SQLite {
 // ----------------------------------------
 
 class HTTP_Cookie {
-    private $cookie = array();
+    private $data = array();
 
     public function __construct($_Cookie) {
         if (is_array( $_Cookie ))
-            return  $this->cookie = $_Cookie;
+            return  $this->data = $_Cookie;
 
         if (function_exists('http_parse_cookie'))
-            return  $this->cookie = http_parse_cookie($_Cookie);
+            return  $this->data = http_parse_cookie($_Cookie);
 
         $_Cookie = explode(';', $_Cookie, 2);
 
         foreach ($_Cookie as $_Item) {
             $_Item = explode('=', $_Item, 2);
-            $this->cookie[trim( $_Item[0] )] = trim( $_Item[1] );
+            $this->data[trim( $_Item[0] )] = trim( $_Item[1] );
         }
     }
     public function __toString() {
         if (function_exists('http_build_cookie'))
-            return  http_build_cookie($this->cookie);
+            return  http_build_cookie($this->data);
 
         $_Cookie = array();
 
-        foreach ($this->cookie  as  $_Key => $_Value)
+        foreach ($this->data  as  $_Key => $_Value)
             $_Cookie[] = "{$_Key}={$_Value}";
 
         return  join('; ', $_Cookie);
     }
 
     public function get($_Name) {
-        if (isset( $this->cookie[$_Name] ))  return $this->cookie[$_Name];
+        if (isset( $this->data[$_Name] ))  return $this->data[$_Name];
     }
     public function set($_Name, $_Value) {
-        $this->cookie[$_Name] = $_Value;
+        $this->data[$_Name] = $_Value;
     }
 }
 
@@ -404,20 +404,23 @@ class HTTP_Request {
         return $_Args;
     }
 
-    public $Header;
+    public $header;
+    public $method;
     public $IPAddress;
-    public $Cookie;
+    public $cookie;
     public $data;
 
     public function __construct() {
-        $_Header = $this->Header = self::getHeaders();
+        $_Header = $this->header = self::getHeaders();
 
-        $this->IPAddress = self::getIPA( $this->Header );
+        $this->method = $this->header['Request-Method'];
+
+        $this->IPAddress = self::getIPA( $this->header );
 
         if (isset( $_Header['Cookie'] ))
-            $this->Cookie = new HTTP_Cookie( $_Header['Cookie'] );
+            $this->cookie = new HTTP_Cookie( $_Header['Cookie'] );
 
-        $this->data = self::getData( $this->Header['Request-Method'] );
+        $this->data = self::getData( $this->method );
     }
 }
 
@@ -487,12 +490,12 @@ class HTTP_Response {
         return $_Header;
     }
 
-    public  $headers;
+    public  $header;
     private $data;
     private $dataJSON;
 
     public function __construct($_Header, $_Data) {
-        $this->headers = isset($_Header[0]) ? self::getFriendlyHeaders($_Header) : $_Header;
+        $this->header = isset($_Header[0]) ? self::getFriendlyHeaders($_Header) : $_Header;
 
         if (is_string( $_Data )) {
             $this->data = $_Data;
@@ -566,9 +569,9 @@ class HTTPServer {
         $this->request = new HTTP_Request();
         $this->onStart = $_onStart;
 
-        $_Header = $this->request->Header;
+        $_Header = $this->request->header;
 
-        if ((! $_xDomain)  ||  ($_Header['Request-Method'] != 'OPTIONS'))
+        if ((! $_xDomain)  ||  ($this->request->method != 'OPTIONS'))
             return;
 
         $_AC = 'Access-Control';
@@ -622,7 +625,7 @@ class HTTPServer {
     }
     public function send($_Data,  $_Header = null) {
         if ($_Data instanceof HTTP_Response) {
-            $_Header = $_Data->headers;
+            $_Header = $_Data->header;
             $_Data = $_Data->data;
         }
         if ($_Header)  $this->setHeader($_Header);
@@ -641,22 +644,21 @@ class HTTPServer {
     }
 
     public function on($_Method, $_Path, $_Callback) {
-        $_rMethod = $this->request->Header['Request-Method'];
         $_rPath = $_SERVER['PATH_INFO'];
         if (
-            ($_rMethod == strtoupper($_Method))  &&
+            ($this->request->method == strtoupper($_Method))  &&
             (stripos($_rPath, $_Path)  !==  false)
         ) {
             $_rPath = explode('/', $_rPath);
             array_shift( $_rPath );
 
-            $_Return = call_user_func_array($_Callback, array(
-                $_rPath,
-                $this->request,
-                isset( $this->onStart )  ?
-                    call_user_func($this->onStart, $_rPath, $this->request)  :
-                    null
-            ));
+            $_Return = isset( $this->onStart )  ?
+                call_user_func($this->onStart, $_rPath, $this->request)  :  null;
+
+            if ($_Return !== false)
+                $_Return = call_user_func_array($_Callback, array(
+                    $_rPath,  $this->request,  $_Return
+                ));
             if (is_array( $_Return ))
                 $this->send($_Return['data'], $_Return['header']);
             else

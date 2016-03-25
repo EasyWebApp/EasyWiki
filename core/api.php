@@ -22,14 +22,39 @@ function iEncrypt($_Raw,  $_Salt = null) {
 
 /* ---------- 通用逻辑 ---------- */
 
-$_No_Login = array('entry', 'category');
+$_No_Need = array(
+    'logIn'    =>  array(
+        'entry'     =>  array(
+            'GET'  =>  true
+        ),
+        'category'  =>  array(
+            'GET'  =>  true
+        )
+    ),
+    'session'  =>  array(
+        'user'    =>  array(
+            'POST'  =>  true
+        ),
+        'online'  =>  array(
+            'POST'  =>  true
+        )
+    )
+);
+function API_Filter($_Type, $_Model, $_Method) {
+    global $_No_Need;
+
+    $_Auth = $_No_Need[$_Type];
+
+    if (isset( $_Auth[$_Model] )  &&  isset( $_Auth[$_Model][$_Method] ))
+        return true;
+}
 
 $_SQL_DB = new SQLite('EasyWiki');
 
-$_HTTP_Server = new HTTPServer(false,  function ($_Route) {
-    global  $_No_Login, $_SQL_DB;
+$_HTTP_Server = new HTTPServer(false,  function ($_Route, $_Request) {
+    global  $_SQL_DB, $_HTTP_Server;
 
-    if (in_array($_Route[0], $_No_Login))  return;
+    if (API_Filter('logIn', $_Route[0], $_Request->method))  return;
 
     $_SQL_DB->createTable('Entry', array(
         'EID'     =>  'Integer Primary Key AutoIncrement',
@@ -67,15 +92,23 @@ $_HTTP_Server = new HTTPServer(false,  function ($_Route) {
 
     session_start();
 
+    if (! (
+        API_Filter('session', $_Route[0], $_Request->method)  ||
+        count($_SESSION)
+    )) {
+        $_HTTP_Server->setStatus(403);
+        return false;
+    }
     return $_User;
 });
 
-function New_Entry($_Name,  $_MarkDown,  $_URL = null) {
+function New_Entry($_Type,  $_Name,  $_MarkDown,  $_URL = null) {
     global $_SQL_DB;
 
     file_put_contents("../data/{$_Name}.md", $_MarkDown);
 
     $_SQL_DB->Entry->insert(array(
+        'Type'    =>  $_Type,
         'Title'   =>  $_Name,
         'AID'     =>  $_SESSION['UID'],
         'Source'  =>  $_URL
@@ -235,7 +268,31 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
     return  json_encode( $_Profile[0] );
 
+})->on('Delete',  'online/',  function () {
+
+    $_SESSION = array();
+
 })->on('Post',  'entry/',  function () {
+
+    $_Param = filter_input_array(INPUT_POST, array(
+        'title'  =>  array(
+            'filter'   =>  FILTER_VALIDATE_REGEXP,
+            'options'  =>  array(
+                'regexp'  =>  '/^[^\\/:\*\?"<>\|\.]{1,20}$/'
+            )
+        ),
+        'type'   =>  array(
+            'filter'   =>  FILTER_VALIDATE_INT,
+            'options'  =>  array(
+                'min_range'  =>  0,
+                'max_range'  =>  2
+            )
+        )
+    ));
+    if (! is_int( $_Param['type'] ))
+        return json_encode(array(
+            'message'  =>  "词条类型错误！"
+        ));
 
     require('php/HyperDown.php');
 
@@ -244,11 +301,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
     $_Marker = new HTML_MarkDown( $_Parser->makeHtml( $_POST['Source_MD'] ) );
 
     $_Name = Local_CharSet(
-        filter_input(INPUT_POST, 'title', FILTER_VALIDATE_REGEXP, array(
-            'options'  =>  array(
-                'regexp'  =>  '/^[^\\/:\*\?"<>\|\.]{1,20}$/'
-            )
-        ))  ?  $_POST['title']  :  $_Marker->title
+        $_Param['title']  ?  $_POST['title']  :  $_Marker->title
     );
 
     New_Entry($_Name, $_POST['Source_MD']);
@@ -257,12 +310,31 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         'message'  =>  "词条更新成功！"
     ));
 
+})->on('Post',  'image/',  function () {
+
+    $_File = $_FILES['editormd-image-file'];
+    $_Type = explode('/', $_File['type'], 2);
+
+    $_Return = array(
+        'success'  =>  $_File['error'] ? 0 : 1,
+        'message'  =>  $_File['error'] ? "失败……" : "成功！"
+    );
+
+    if ((! $_File['error'])  &&  ($_Type[0] == 'image')) {
+        $_Path = '../data/image';
+        @ mkdir($_Path);
+        $_Path .= "/{$_File['name']}";
+
+        move_uploaded_file($_File['tmp_name'], $_Path);
+
+        $_Return['url'] = substr($_Path, 3);
+    }
+
+    return json_encode($_Return);
+
 })->on('Post',  'spider/',  function () {
 
-    global $_SQL_DB, $_HTTP_Server;
-
-    if (! count($_SESSION))
-        return $_HTTP_Server->setStatus(403);
+    global $_SQL_DB;
 
     if (! filter_input(INPUT_POST, 'url', FILTER_VALIDATE_URL))
         return json_encode(array());
@@ -276,7 +348,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         preg_match($_POST['name'], $_POST['url'], $_Name);
         $_Name = $_Name[1];
     }
-    New_Entry($_Name, $_Marker->convert(), $_POST['url']);
+    New_Entry(0, $_Name, $_Marker->convert(), $_POST['url']);
 
     //  Fetch History
     $_SQL_DB->createTable('Fetch', array(
