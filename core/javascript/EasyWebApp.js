@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-25)  Stable
+//      [Version]    v2.3  (2016-03-28)  Stable
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -473,19 +473,23 @@
                         This_Page.sourceLink.getData()
                     );
                 });
-            if (! $_API.length)  return iRender.call(this.ownerApp);
+            if (! $_API.length)  return iRender.call(this);
 
             var iData = { },  Data_Ready = $_API.length;
 
+            function API_Load(_Data_) {
+                var iArgs = [iData, _Data_];
+                if (_Data_ instanceof Array)  iArgs.unshift([ ]);
+                iData = $.extend.apply($, iArgs);
+
+                if (--Data_Ready > 0)  return;
+
+                iRender.call(This_Page, iData);
+                $_API.remove();
+            }
+
             for (var i = 0;  i < $_API.length;  i++)
-                (new PageLink(this.ownerApp, $_API[i])).loadData(function () {
-                    $.extend(iData, arguments[0]);
-
-                    if (--Data_Ready > 0)  return;
-
-                    iRender.call(this.app, iData);
-                    $_API.remove();
-                });
+                (new PageLink(this.ownerApp, $_API[i])).loadData(API_Load);
         },
         load:    function (iLink, Page_Load) {
             var MarkDown_File = /\.(md|markdown)\??/i,
@@ -564,14 +568,14 @@
 
         /* ----- Load DOM  from  Network ----- */
             var iData,  Need_HTML = (this.type == 'Inner');
-            var Load_Stage = Need_HTML ? 2 : 1;
+            var Load_Stage = Need_HTML ? 2 : 1,  This_Link = this;
 
             function Page_Load() {
                 if (arguments[0])  iData = arguments[0];
 
                 if (--Load_Stage != 0)  return;
 
-                This_Page.render(this.$_DOM, iData).onReady();
+                This_Page.render(This_Link.$_DOM, iData).onReady();
             }
 
             this.loadData(Page_Load);
@@ -820,7 +824,7 @@
 
         if (! Hash_Path_Load.call(This_Page))
             This_Page.boot(function () {
-                This_Page.render(null, arguments[0]).onReady();
+                this.render(null, arguments[0]).onReady();
             });
 
         $_BOM.on('hashchange',  $.proxy(Hash_Path_Load, This_Page));

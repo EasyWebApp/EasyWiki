@@ -379,4 +379,34 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             'where'   =>  'Times = 0'
         ))
     );
+})->on('Get',  'auth/',  function () {
+
+    $_Auth = json_decode(file_get_contents('auth.json'), true);
+
+    $_Return = array();
+
+    foreach ($_Auth  as  $_API => $_Config) {
+        $_Config['API_URL'] = $_API;
+        $_Return[] = $_Config;
+    }
+
+    return array(
+        'header'    =>    array(
+            'Content-Type'  =>  'application/json'
+        ),
+        'data'      =>    $_Return
+    );
+})->on('Post',  'auth/',  function () {
+
+    $_Auth = array();
+
+    foreach ($_POST  as  $_Key => $_Value)
+        if ($_Value[0] == '{')
+            $_Auth[$_Key] = json_decode($_Value);
+
+    file_put_contents('auth.json', json_encode($_Auth));
+
+    return json_encode(array(
+        'message'  =>  "权限更新成功！"
+    ));
 });

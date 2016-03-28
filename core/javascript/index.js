@@ -155,6 +155,20 @@
                         $_Spider.find('input[type="submit"]')[0].click();
                 });
             }
+            case 'auth.html':
+                $('form', this).submit(function () {
+                    if (! arguments[0].isTrusted)  return;
+
+                    $('tbody tr', this).each(function () {
+                        var $_JSON = $('input[type="hidden"]', this);
+
+                        $_JSON.val(
+                            JSON.stringify($.paramJSON(
+                                '?'  +  $.param( $(this).serializeArray() )
+                            ))
+                        ).attr('name', $_JSON.prevAll('label').text());
+                    });
+                });
         }
         if (_TP_.slice(-3) != '.md') {
             $_Body.addClass('Not_Entry');

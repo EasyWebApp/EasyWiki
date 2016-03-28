@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-03-22)  Stable
+//      [Version]    v1.0  (2016-03-28)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -1625,8 +1625,12 @@
             case 'textarea':    ;
             case 'select':      ;
             case 'input':       {
-                if ((this.type || '').match(/radio|checkbox/i)  &&  (this.value == iValue))
+                if (
+                    (this.type || '').match(/radio|checkbox/i)  &&
+                    (JSON.parse(this.value) == iValue)
+                )
                     this.checked = true;
+
                 return $_This.val(iValue);
             }
             default:            {
