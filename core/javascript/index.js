@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.8  (2016-03-23)  Beta
+//      [Version]    v0.9  (2016-03-29)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -69,6 +69,14 @@
         return  (new Date(UTS * 1000)).toLocaleString();
     }
 
+    function DataFix(iData, iFixer) {
+        for (var i = 0;  i < iData.length;  i++)
+            for (var iKey in iData[i])  if (iFixer[iKey])
+                iData[i][iKey] = iFixer[iKey].call(iData[i], iData[i][iKey]);
+
+        return iData;
+    }
+
     function Load_Editor(MD_URL) {
         var iCDN = 'https://pandao.github.io/editor.md/',
             iReady = MD_URL ? 2 : 1,
@@ -129,17 +137,16 @@
             return BOM.alert(iData.msg);
 
         switch (_TP_) {
-            case 'search.html':    {
-                iData = {
-                    result:    $.each(iData,  function () {
-                        this.cTime = Time_Fix( this.cTime );
-                        this.mTime = Time_Fix( this.mTime );
-                        this.URL =
-                            BOM.location.href.split('#')[0] + '#!' + this.URL;
-                    })
-                };
+            case '_Search':
+                DataFix(iData, {
+                    cTime:    Time_Fix,
+                    mTime:    Time_Fix,
+                    URL:      function () {
+                        return  BOM.location.href.split('#')[0] +
+                            '#!' + arguments[0];
+                    }
+                });
                 break;
-            }
             case 'signUp.html':    $('form', this).pwConfirm();    break;
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
@@ -155,6 +162,12 @@
                         $_Spider.find('input[type="submit"]')[0].click();
                 });
             }
+            case '_Auth':
+                DataFix(iData, {
+                    cTime:    Time_Fix,
+                    mTime:    Time_Fix
+                });
+                break;
             case 'auth.html':
                 $('form', this).submit(function () {
                     if (! arguments[0].isTrusted)  return;

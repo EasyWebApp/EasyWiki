@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-28)  Stable
+//      [Version]    v2.3  (2016-03-29)  Stable
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -132,15 +132,16 @@
 
     function InnerPage(App_Instance, iLink) {
         $.extend(this, {
-            ownerApp:      App_Instance,
-            sourceLink:    iLink,
-            title:         iLink.title || DOM.title,
-            URL:           iLink.alt || BOM.location.href,
-            HTML:          iLink.href || DOM.URL,
-            method:        iLink.method,
-            JSON:          iLink.src,
-            time:          $.now(),
-            link:          [ ]
+            ownerApp:         App_Instance,
+            sourceLink:       iLink,
+            title:            iLink.title || DOM.title,
+            URL:              iLink.alt || BOM.location.href,
+            HTML:             iLink.href || DOM.URL,
+            method:           iLink.method,
+            JSON:             iLink.src,
+            time:             $.now(),
+            innerLink:        [ ],
+            innerTemplate:    [ ]
         });
     }
 
@@ -491,16 +492,21 @@
             for (var i = 0;  i < $_API.length;  i++)
                 (new PageLink(this.ownerApp, $_API[i])).loadData(API_Load);
         },
+        getTemplate:    function (DOM_ID) {
+            if (! this.innerTemplate[DOM_ID]) {
+                this.innerTemplate[DOM_ID] = $('*[id="' + DOM_ID + '"]').remove();
+                $.ListView.findView(this.innerTemplate[DOM_ID], false);
+            }
+            return this.innerTemplate[DOM_ID].children().clone(true);
+        },
         load:    function (iLink, Page_Load) {
             var MarkDown_File = /\.(md|markdown)\??/i,
                 This_Page = this,  This_App = this.ownerApp;
 
-            if (iLink.href[0] == '#') {
-                this.show(
-                    $('*[id="' + iLink.href.slice(1) + '"]').children().clone(true)
+            if (iLink.href[0] == '#')
+                return Page_Load.call(
+                    this.show(this.getTemplate( iLink.href.slice(1) )).ownerApp
                 );
-                return  Page_Load.call(This_App);
-            }
 
             $.get(iLink.getURL('href'),  (! iLink.href.match(MarkDown_File)) ?
                 function (iHTML) {
@@ -666,7 +672,7 @@
 
             for (var i = 0, iLink;  i < $_Link.length;  i++) {
                 iLink = new PageLink(this.ownerApp, $_Link[i]);
-                this.link.push(iLink);
+                this.innerLink.push(iLink);
                 if (iPrefetch)  iLink.prefetch();
             }
             return $_Link;
@@ -800,9 +806,9 @@
             if (This_App.loading)  return false;
 
             This_App.dataStack.flush( $(this) ).attr('action',  function () {
-
-                return  This_App.makeURL(arguments[1]);
-
+                return This_App.makeURL(
+                    arguments[1], This_App.history.last(true).sourceLink.getData()
+                );
             }).ajaxSubmit(function (iData) {
 
                 var iURL = arguments[2].responseURL;

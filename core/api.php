@@ -49,7 +49,7 @@ function API_Filter($_Type, $_Model, $_Method) {
         return true;
 }
 
-$_SQL_DB = new SQLite('EasyWiki');
+$_SQL_DB = new SQLite('data/EasyWiki');
 
 $_HTTP_Server = new HTTPServer(false,  function ($_Route, $_Request) {
     global  $_SQL_DB, $_HTTP_Server;
@@ -102,6 +102,26 @@ $_HTTP_Server = new HTTPServer(false,  function ($_Route, $_Request) {
     return $_User;
 });
 
+function File_Search($_Pattern,  $_Callback = null) {
+    return array_map(
+        function ($_Path) use ($_Callback) {
+            $_Item = array(
+                'cTime'  =>  filectime($_Path),
+                'mTime'  =>  filemtime($_Path)
+            );
+            $_Path = iconv(ini_get('default_charset'), 'UTF-8', $_Path);
+
+            $_Item['title'] = pathinfo($_Path, PATHINFO_FILENAME);
+
+            if (is_callable( $_Callback ))
+                $_Item = call_user_func($_Callback, $_Path, $_Item);
+
+            return $_Item;
+        },
+        glob($_Pattern)
+    );
+}
+
 function New_Entry($_Type,  $_Name,  $_MarkDown,  $_URL = null) {
     global $_SQL_DB;
 
@@ -121,22 +141,12 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
     $_KeyWord = Local_CharSet( $_GET['keyword'] );
 
-    return json_encode(array_map(
-        function ($_Path) {
-            $_Entry = array(
-                'cTime'  =>  filectime($_Path),
-                'mTime'  =>  filemtime($_Path)
-            );
-            $_Path = iconv(ini_get('default_charset'), 'UTF-8', $_Path);
-
+    return json_encode(
+        File_Search("../data/*{$_KeyWord}*.md",  function ($_Path, $_Entry) {
             $_Entry['URL'] = substr($_Path, 3);
-            $_Entry['title'] = substr($_Path, 8, -3);
-
             return $_Entry;
-        },
-        glob("../data/*{$_KeyWord}*.md")
-    ));
-
+        })
+    );
 })->on('Get',  'category/',  function () {
     return json_encode(array(
         'entry'  =>  array(
@@ -379,24 +389,30 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             'where'   =>  'Times = 0'
         ))
     );
-})->on('Get',  'auth/',  function () {
+})->on('Get',  'auth/',  function ($_Path) {
 
-    $_Auth = json_decode(file_get_contents('auth.json'), true);
+    if (empty( $_Path[1] ))
+        $_Return = File_Search('data/Auth/*.json');
+    else {
+        $_Auth = json_decode(
+            file_get_contents("data/Auth/{$_Path[1]}.json"),  true
+        );
+        $_Return = array();
 
-    $_Return = array();
-
-    foreach ($_Auth  as  $_API => $_Config) {
-        $_Config['API_URL'] = $_API;
-        $_Return[] = $_Config;
+        foreach ($_Auth  as  $_API => $_Config) {
+            $_Config['API_URL'] = $_API;
+            $_Return[] = $_Config;
+        }
     }
-
     return array(
         'header'    =>    array(
             'Content-Type'  =>  'application/json'
         ),
         'data'      =>    $_Return
     );
-})->on('Post',  'auth/',  function () {
+})->on('Post',  'auth/',  function ($_Path) {
+
+    if (empty( $_Path[1] ))  return;
 
     $_Auth = array();
 
@@ -404,7 +420,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         if ($_Value[0] == '{')
             $_Auth[$_Key] = json_decode($_Value);
 
-    file_put_contents('auth.json', json_encode($_Auth));
+    file_put_contents("data/Auth/{$_Path[1]}.json", json_encode($_Auth));
 
     return json_encode(array(
         'message'  =>  "权限更新成功！"

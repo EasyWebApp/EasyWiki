@@ -67,7 +67,7 @@
             </div>
             <form class="Grid-Column"
                   target="_self" action="core/api.php/entry/"
-                  href="core/html/search.html">
+                  href="#_Search">
                 <input type="text" name="keyword" placeholder="全文搜索" />
             </form>
             <div class="Grid-Column">
@@ -84,7 +84,7 @@
                         <li target="_self" href="core/html/spider.html">
                             词条导入
                         </li>
-                        <li target="_self" href="core/html/auth.html">
+                        <li target="_self" href="#_Auth" src="core/api.php/auth/">
                             权限设置
                         </li>
                         <li>帮助</li>
@@ -97,11 +97,15 @@
                 欢迎使用由 EasyWebApp v2 驱动的内容系统！
             </h1>
         </div>
+
+    <!---------- 简单内页 ---------->
+
         <div class="InnerPage" id="_About">
             <p class="CenterX">
                 感谢<em class="Text">WikiPedia</em>对<em class="Text">EasyWiki</em>框架设计的启迪！
             </p>
         </div>
+
         <div class="InnerPage" id="_Login">
             <form class="CenterX" target="message"
                   method="POST" action="core/api.php/online/">
@@ -120,6 +124,35 @@
                     </a>
                 </div>
             </form>
+        </div>
+
+        <div class="InnerPage" id="_Search">
+            <table>
+                <thead><tr>
+                    <th>词条名</th><th>最后编辑</th><th>创建时间</th>
+                </tr></thead>
+                <tbody class="CenterX"><tr>
+                    <td><a rel="nofollow" name="URL"><span name="title">
+                    </span></a></td>
+                    <td name="mTime"></td>
+                    <td name="cTime"></td>
+                </tr></tbody>
+            </table>
+        </div>
+
+        <div class="InnerPage" id="_Auth">
+            <table>
+                <thead><tr>
+                    <th>权限组</th><th>最后编辑</th><th>创建时间</th>
+                </tr></thead>
+                <tbody class="CenterX">
+                    <tr target="_self" href="core/html/auth.html" data-group="title">
+                        <td name="title"></td>
+                        <td name="mTime"></td>
+                        <td name="cTime"></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </body></html>

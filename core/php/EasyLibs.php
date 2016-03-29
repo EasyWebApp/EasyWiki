@@ -3,7 +3,7 @@
 //                >>>  EasyLibs.php  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-25)  Stable
+//      [Version]    v2.3  (2016-03-29)  Stable
 //
 //      [Require]    PHP v5.3+
 //
@@ -74,7 +74,7 @@ class FS_Directory extends SplFileInfo {
     private $accessMode;
     public $URI;
 
-    public function __construct($_Dir_Name,  $_Mode = 0777) {
+    public function __construct($_Dir_Name,  $_Mode = 0764) {
         if (! file_exists( $_Dir_Name ))
             mkdir($_Dir_Name, $_Mode, true);
 
@@ -123,20 +123,22 @@ class FS_Directory extends SplFileInfo {
         return rmdir($_URI);
     }
     public function copyTo($_Target) {
-        if (! file_exists($_Target))  mkdir($_Target, 0777, true);
+        $_Mode = $this->accessMode;
+
+        if (! file_exists($_Target))  mkdir($_Target, $_Mode, true);
 
         $_Target = self::realPath($_Target);
 
-        return  $this->traverse(2,  function ($_Name, $_File) use ($_Target) {
+        return  $this->traverse(2,  function ($_Name, $_File) use ($_Target, $_Mode) {
             $_Name = $_Target.DIRECTORY_SEPARATOR.$_Name;
             $_URI = $_File->URI;
             unset($_File);
 
             if ( is_dir($_URI) )
-                return  mkdir($_Name, 0777, true);
+                return  mkdir($_Name, $_Mode, true);
 
             if (! file_exists($_Name))
-                mkdir(dirname($_Name), 0777, true);
+                mkdir(dirname($_Name), $_Mode, true);
             copy($_URI, $_Name);
         });
     }
@@ -649,8 +651,7 @@ class HTTPServer {
             ($this->request->method == strtoupper($_Method))  &&
             (stripos($_rPath, $_Path)  !==  false)
         ) {
-            $_rPath = explode('/', $_rPath);
-            array_shift( $_rPath );
+            $_rPath = explode('/',  trim($_rPath, '/'));
 
             $_Return = isset( $this->onStart )  ?
                 call_user_func($this->onStart, $_rPath, $this->request)  :  null;
