@@ -7,6 +7,9 @@ set_time_limit(0);
 
 require_once('php/EasyLibs.php');
 
+if (version_compare('5.4.0', PHP_VERSION) > 0)
+    define('JSON_PRETTY_PRINT', null);
+
 function Local_CharSet($_Raw,  $_Raw_CS = 'UTF-8') {
     return  iconv($_Raw_CS, ini_get('default_charset'), $_Raw);
 }
@@ -263,7 +266,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             'message'  =>  "管理员账号未及时登录，系统初始化失败，须重新注册管理员！"
         ));
     }
-    $_UID = $_SESSION['UID'] = $_User[0]['UID'];
+    $_UID = $_User[0]['UID'];
 
     $_SQL_DB->User->update("UID = '{$_UID}'", array(
         'aTime'  =>  time()
@@ -275,6 +278,10 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         'where'   =>  "UID = {$_UID}"
     ));
     $_Profile[0]['message'] = "欢迎进入 EasyWiki 的世界！";
+    $_Profile[0]['auth'] = json_decode(
+        file_get_contents('data/Auth/User.json'),  true
+    );
+    $_SESSION = $_Profile[0];
 
     return  json_encode( $_Profile[0] );
 
@@ -420,7 +427,9 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         if ($_Value[0] == '{')
             $_Auth[$_Key] = json_decode($_Value);
 
-    file_put_contents("data/Auth/{$_Path[1]}.json", json_encode($_Auth));
+    file_put_contents(
+        "data/Auth/{$_Path[1]}.json",  json_encode($_Auth, JSON_PRETTY_PRINT)
+    );
 
     return json_encode(array(
         'message'  =>  "权限更新成功！"

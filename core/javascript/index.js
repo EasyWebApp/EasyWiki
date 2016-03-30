@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.9  (2016-03-29)  Beta
+//      [Version]    v0.9  (2016-03-30)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -129,7 +129,30 @@
         ], Editor_Init);
     }
 
-    $_MainView.on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
+/* ---------- 权限控制 ---------- */
+
+    function Auth_Control(iAuth) {
+        var $_Auth = $('.Auth_Control[data-api]');
+
+        for (var i = 0, _Auth_;  i < $_Auth.length;  i++) {
+            _Auth_ = iAuth[ $_Auth[i].dataset.api ];
+
+            $($_Auth[i])[
+                (_Auth_ && _Auth_[$_Auth[i].dataset.method])  ?
+                    'show' : 'hide'
+            ]();
+        }
+    }
+
+    $.getJSON('core/data/Auth/Guest.json', Auth_Control);
+
+
+    $_MainView.on('apiCall',  function () {
+
+        if (arguments[3].indexOf('core/api.php/online/') > -1)
+            Auth_Control( arguments[4].auth );
+
+    }).on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
             _PP_ = $.fileName(Prev_Page.HTML);
 

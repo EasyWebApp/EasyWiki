@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-03-28)  Stable
+//      [Version]    v1.0  (2016-03-30)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -2952,13 +2952,18 @@
         return 0;
     }
 
-    var Tag_Style = { };
+    var Tag_Style = { },
+        $_SandBox = $('<iframe />',  {style: 'display: none'}).appendTo('body');
 
     function Tag_Default_CSS(iTagName) {
+        var _BOM_ = $_SandBox[0].contentWindow;
+
         if (! Tag_Style[iTagName]) {
-            var $_Default = $('<' + iTagName + ' />').appendTo('body');
+            var $_Default = $('<' + iTagName + ' />').appendTo(
+                    _BOM_.document.body
+                );
             Tag_Style[iTagName] = $.extend(
-                { },  BOM.getComputedStyle( $_Default[0] )
+                { },  _BOM_.getComputedStyle( $_Default[0] )
             );
             $_Default.remove();
         }
@@ -2988,17 +2993,21 @@
             });
         },
         show:               function () {
-            for (var i = 0, $_This;  i < this.length;  i++) {
-                $_This = $(this[i]);
+            return  this.each(function () {
+                var $_This = $(this);
+                var iStyle = $_This.css(['display', 'visibility', 'opacity']);
 
-                $_This.css({
-                    display:       $_This.data('_CSS_Display_') ||
-                        Last_Valid_CSS.call($_This, 'display'),
-                    visibility:    'visible',
-                    opacity:       1
-                });
-            }
-            return this;
+                if (iStyle.display == 'none')
+                    $_This.css('display', (
+                        $_This.data('_CSS_Display_') ||
+                        Last_Valid_CSS.call($_This, 'display')
+                    ));
+                if (iStyle.visibility == 'hidden')
+                    $_This.css('visibility', 'visible');
+
+                if (iStyle.opacity == 0)
+                    $_This.css('opacity', 1);
+            });
         }
     });
 

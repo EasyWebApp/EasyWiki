@@ -1,6 +1,7 @@
 <!DocType HTML>
 <html lang="zh-CN"><head>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Cache-Control"
+          content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
@@ -59,11 +60,15 @@
                     <i class="Icon Mobile"></i>
                     <div class="DropDown Body"></div>
                 </span>
-                <i class="Icon" title="创建"
-                   target="_self" href="core/html/editor.html">+</i>
-                <i class="Icon Pen" title="编辑"
-                   target="_self" href="core/html/editor.html?modify=true">
-                </i>
+                <span class="Auth_Control" data-api="entry" data-method="POST">
+                    <i class="Icon" title="创建"
+                       target="_self" href="core/html/editor.html">+</i>
+                </span>
+                <span class="Auth_Control" data-api="entry" data-method="POST">
+                    <i class="Icon Pen" title="编辑"
+                       target="_self" href="core/html/editor.html?modify=true">
+                    </i>
+                </span>
             </div>
             <form class="Grid-Column"
                   target="_self" action="core/api.php/entry/"
@@ -72,7 +77,8 @@
             </form>
             <div class="Grid-Column">
                 <a class="Button" target="_self" href="#_Login">登录</a>
-                <div class="DropDown Head" id="UserInfo">
+                <div id="UserInfo" class="DropDown Head Auth_Control"
+                     data-api="online" data-method="DELETE">
                     <span name="NickName"></span>
                     <ul class="DropDown Body">
                         <li>账号设置</li>
@@ -81,11 +87,15 @@
                             退出系统
                         </li>
                         <li class="Separator"></li>
-                        <li target="_self" href="core/html/spider.html">
-                            词条导入
+                        <li class="Auth_Control" data-api="spider" data-method="POST">
+                            <a target="_self" href="core/html/spider.html">
+                                词条导入
+                            </a>
                         </li>
-                        <li target="_self" href="#_Auth" src="core/api.php/auth/">
-                            权限设置
+                        <li class="Auth_Control" data-api="auth" data-method="POST">
+                            <a target="_self" href="#_Auth" src="core/api.php/auth/">
+                                权限设置
+                            </a>
                         </li>
                         <li>帮助</li>
                     </ul>
@@ -112,10 +122,12 @@
                 <h2>欢迎维基人！</h2>
                 <pre name="message"></pre>
                 <div class="Row CenterX">
-                    <input type="email" name="email" required placeholder="用户名" />
+                    <input type="email" name="email" required
+                           placeholder="用户名" />
                 </div>
                 <div class="Row CenterX">
-                    <input type="password" name="password" required placeholder="密码" />
+                    <input type="password" name="password" required
+                           placeholder="密码" />
                 </div>
                 <div class="Row CenterX">
                     <input type="submit" value="登录" />
@@ -146,7 +158,8 @@
                     <th>权限组</th><th>最后编辑</th><th>创建时间</th>
                 </tr></thead>
                 <tbody class="CenterX">
-                    <tr target="_self" href="core/html/auth.html" data-group="title">
+                    <tr target="_self" href="core/html/auth.html"
+                        data-group="title">
                         <td name="title"></td>
                         <td name="mTime"></td>
                         <td name="cTime"></td>

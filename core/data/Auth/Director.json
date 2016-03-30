@@ -1,0 +1,30 @@
+{
+    "entry":       {
+        "GET":       true,
+        "POST":      true,
+        "DELETE":    true
+    },
+    "category":    {
+        "GET":    true
+    },
+    "user":        {
+        "GET":       true,
+        "POST":      true
+    },
+    "online":      {
+        "GET":       true,
+        "POST":      true,
+        "DELETE":    true
+    },
+    "image":       {
+        "GET":       true,
+        "POST":      true,
+        "DELETE":    true
+    },
+    "spider":      {
+        "POST":    true
+    },
+    "auth":        {
+        "GET":       true
+    }
+}
