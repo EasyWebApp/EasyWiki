@@ -25,6 +25,8 @@ function iEncrypt($_Raw,  $_Salt = null) {
 
 /* ---------- 通用逻辑 ---------- */
 
+$_Auth = array('Admin', 'Director', 'Writer', 'Reader');
+
 $_No_Need = array(
     'logIn'    =>  array(
         'entry'     =>  array(
@@ -123,6 +125,67 @@ function File_Search($_Pattern,  $_Callback = null) {
         },
         glob($_Pattern)
     );
+}
+
+function Session_Bind(&$_User, &$_Profile) {
+    global $_Auth;
+
+    $_Profile['UID'] = $_User['UID'];
+
+    $_Profile['auth'] = json_decode(
+        file_get_contents("data/Auth/{$_Auth[$_User['Auth']]}.json"),  true
+    );
+    $_SESSION = $_Profile;
+
+    return $_Profile;
+}
+
+function Login() {
+    global $_SQL_DB;
+
+    $_User = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL)  ?
+        $_SQL_DB->query(array(
+            'select'  =>  '*',
+            'from'    =>  'User',
+            'where'   =>  "Email = '{$_POST['email']}'"
+        )) :
+        array();
+
+    if (! count($_User))
+        return  array('message' => "该电邮未注册！");
+
+    $_PassWord = iEncrypt($_POST['password'], $_User[0]['Salt']);
+
+    if ($_PassWord['code'] != $_User[0]['PassWord'])
+        return array('message' => "密码错误！");
+
+    if (
+        ($_User[0]['UID'] === 0)  &&
+        ($_User[0]['aTime'] === 0)  &&
+        (! isset( $_SESSION['UID'] ))
+    ) {
+        $_SQL_DB->User->delete("UID = {$_User[0]['UID']}");
+        return array(
+            'message'  =>  "管理员账号未及时登录，系统初始化失败，须重新注册管理员！"
+        );
+    }
+    $_UID = $_User[0]['UID'];
+
+    $_SQL_DB->User->update("UID = '{$_UID}'", array(
+        'aTime'  =>  time()
+    ));
+
+    $_Profile = $_SQL_DB->query(array(
+        'select'  =>  '*',
+        'from'    =>  'Profile',
+        'where'   =>  "UID = {$_UID}"
+    ));
+
+    Session_Bind($_Profile[0], $_User[0]);
+
+    $_Profile[0]['message'] = "欢迎进入 EasyWiki 的世界！";
+
+    return $_Profile[0];
 }
 
 function New_Entry($_Type,  $_Name,  $_MarkDown,  $_URL = null) {
@@ -226,9 +289,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             'Portrait'  =>  FILTER_VALIDATE_URL
         ))
     );
-    $_Profile['UID'] = $_SESSION['UID'] = $_User[0]['UID'];
-
-    $_SQL_DB->Profile->insert( $_Profile );
+    $_SQL_DB->Profile->insert( Session_Bind($_Profile, $_User[0]) );
 
     return json_encode(array(
         'message'  =>  "注册成功！请立即登录此账号以激活~"
@@ -236,54 +297,15 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
 })->on('Post',  'online/',  function () {
 
-    global $_SQL_DB;
-
-    $_User = $_SQL_DB->query(array(
-        'select'  =>  '*',
-        'from'    =>  'User',
-        'where'   =>  "Email = '{$_POST['email']}'"
-    ));
-
-    if (! count($_User))
-        return json_encode(array(
-            'message'  =>  "该电邮未注册！"
-        ));
-
-    $_PassWord = iEncrypt($_POST['password'], $_User[0]['Salt']);
-
-    if ($_PassWord['code'] != $_User[0]['PassWord'])
-        return json_encode(array(
-            'message'  =>  "密码错误！"
-        ));
-
-    if (
-        ($_User[0]['UID'] === 0)  &&
-        ($_User[0]['aTime'] === 0)  &&
-        (! isset( $_SESSION['UID'] ))
-    ) {
-        $_SQL_DB->User->delete("UID = {$_User[0]['UID']}");
-        return json_encode(array(
-            'message'  =>  "管理员账号未及时登录，系统初始化失败，须重新注册管理员！"
-        ));
-    }
-    $_UID = $_User[0]['UID'];
-
-    $_SQL_DB->User->update("UID = '{$_UID}'", array(
-        'aTime'  =>  time()
-    ));
-
-    $_Profile = $_SQL_DB->query(array(
-        'select'  =>  '*',
-        'from'    =>  'Profile',
-        'where'   =>  "UID = {$_UID}"
-    ));
-    $_Profile[0]['message'] = "欢迎进入 EasyWiki 的世界！";
-    $_Profile[0]['auth'] = json_decode(
-        file_get_contents('data/Auth/User.json'),  true
-    );
-    $_SESSION = $_Profile[0];
-
-    return  json_encode( $_Profile[0] );
+    if (count( $_SESSION ))
+        $_Return = $_SESSION;
+    else
+        $_Return = isset( $_POST['email'] )  ?  Login()  :  array(
+            'auth'  =>  json_decode(
+                file_get_contents('data/Auth/Reader.json'),  true
+            )
+        );
+    return json_encode($_Return);
 
 })->on('Delete',  'online/',  function () {
 

@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.3  (2016-03-29)  Stable
+//      [Version]    v2.3  (2016-03-31)  Stable
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -110,7 +110,7 @@
                     this.getData(),
                     this.method.match(/Get|Delete/i)  &&  this.getArgs()
                 );
-                if ((iKey == 'href')  &&  (this[iKey].slice(-1) == '?'))
+                if (this[iKey].slice(-1) == '?')
                     this[iKey] = this[iKey].slice(0, -1);
             }
             return this[iKey];
@@ -315,18 +315,16 @@
                     return iData;
             }
         },
-        flush:        function () {
-            var _Data_ = arguments[0].serializeArray(),  iData = { };
+        flush:        function (iSource) {
+            var _Data_ = this.stack;
 
-            for (var i = 0;  i < _Data_.length;  i++)
-                iData[_Data_[i].name] = _Data_[i].value;
+            _Data_[_Data_.length - 1] = $.extend(
+                _Data_[_Data_.length - 1] || { },
+                (iSource instanceof $)  ?
+                    $.paramJSON('?' + iSource.serialize())  :  iSource
+            );
 
-            _Data_ = this.stack;
-            if (! _Data_[_Data_.length - 1])
-                _Data_[_Data_.length - 1] = { };
-            $.extend(_Data_[_Data_.length - 1],  iData);
-
-            return arguments[0];
+            return iSource;
         }
     });
 
@@ -426,30 +424,38 @@
             var iLink = this,  This_App = this.app,
                 API_URL = this.getURL('src');
 
-            function AJAX_Ready() {
-                Data_Ready.call(
-                    iLink,
-                    This_App.domRoot.triggerHandler('apiCall', [
-                        This_App,
-                        This_App.history.last().HTML,
-                        This_App.proxy  ?
-                            BOM.decodeURIComponent( API_URL.slice(This_App.proxy.length) )  :
+            function AJAX_Ready(iData) {
+                API_URL = API_URL || iLink.getURL('action');
+
+                iData = This_App.domRoot.triggerHandler('apiCall', [
+                    This_App,
+                    {
+                        method:    iLink.method,
+                        URL:       This_App.proxy  ?
+                            BOM.decodeURIComponent(
+                                API_URL.slice(This_App.proxy.length)
+                            ) :
                             API_URL,
-                        arguments[0]
-                    ]) || arguments[0]
-                );
+                        data:      iData
+                    },
+                    This_App.history.last().HTML
+                ]) || iData;
+
+                if (typeof Data_Ready == 'function')
+                    Data_Ready.call(iLink, iData);
+                else
+                    This_App.dataStack.flush(iData);
             }
-            if (! this.src)  return  AJAX_Ready.call(this, this.getData());
+
+            if (! API_URL)  return  AJAX_Ready.call(this, this.getData());
 
             switch (this.method) {
                 case 'get':       ;
                 case 'delete':
-                    $[this.method](API_URL,  Data_Ready && AJAX_Ready);    break;
+                    $[this.method](API_URL, AJAX_Ready);    break;
                 case 'post':      ;
                 case 'put':
-                    $[this.method](
-                        API_URL,  this.getArgs(),  Data_Ready && AJAX_Ready
-                    );
+                    $[this.method](API_URL, this.getArgs(), AJAX_Ready);
             }
         }
     });

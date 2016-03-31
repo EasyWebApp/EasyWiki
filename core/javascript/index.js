@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.9  (2016-03-30)  Beta
+//      [Version]    v0.9  (2016-03-31)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -143,15 +143,21 @@
             ]();
         }
     }
-
-    $.getJSON('core/data/Auth/Guest.json', Auth_Control);
-
+/*
+    $.post('core/api.php/online/',  null,  function () {
+        Auth_Control( arguments[0].auth );
+    });
+*/
 
     $_MainView.on('apiCall',  function () {
+        var iResponse = arguments[2];
 
-        if (arguments[3].indexOf('core/api.php/online/') > -1)
-            Auth_Control( arguments[4].auth );
+        if (iResponse.URL.indexOf('core/api.php/online/') < 0)  return;
 
+        switch (iResponse.method.toUpperCase()) {
+            case 'DELETE':    return BOM.location.replace('.');
+            case 'POST':      Auth_Control( iResponse.data.auth );
+        }
     }).on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
             _PP_ = $.fileName(Prev_Page.HTML);
@@ -198,11 +204,9 @@
                     $('tbody tr', this).each(function () {
                         var $_JSON = $('input[type="hidden"]', this);
 
-                        $_JSON.val(
-                            JSON.stringify($.paramJSON(
-                                '?'  +  $.param( $(this).serializeArray() )
-                            ))
-                        ).attr('name', $_JSON.prevAll('label').text());
+                        $_JSON.val(JSON.stringify(
+                            $.paramJSON('?' + $(this).serialize())
+                        )).attr('name', $_JSON.prevAll('label').text());
                     });
                 });
         }

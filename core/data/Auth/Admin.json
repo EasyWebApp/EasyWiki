@@ -14,7 +14,6 @@
     },
     "online":      {
         "GET":       true,
-        "POST":      true,
         "DELETE":    true
     },
     "image":       {

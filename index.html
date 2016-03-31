@@ -41,6 +41,8 @@
         } else if (! self.location.hash.slice(1))
             $_Link.attr('href', 'data/index.md').appendTo('head');
     </script>
+
+    <link target="_blank" method="POST" src="core/api.php/online/" />
 </head><body class="Grid-Row">
     <ul id="Main_Nav" class="Grid-Column Column_1-6 No_Select Entry_Only">
         <li>
@@ -76,7 +78,9 @@
                 <input type="text" name="keyword" placeholder="全文搜索" />
             </form>
             <div class="Grid-Column">
-                <a class="Button" target="_self" href="#_Login">登录</a>
+                <span class="Auth_Control" data-api="online" data-method="POST">
+                    <a class="Button" target="_self" href="#_Login">登录</a>
+                </span>
                 <div id="UserInfo" class="DropDown Head Auth_Control"
                      data-api="online" data-method="DELETE">
                     <span name="NickName"></span>

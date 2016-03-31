@@ -1588,10 +1588,7 @@
                     (! $_Value[i].type.match(/radio|checkbox/i))  ||
                     $_Value[i].checked
                 )
-                    iValue[j++] = {
-                        name:     $_Value[i].name,
-                        value:    $_Value[i].value
-                    };
+                    iValue[j++] = $($_Value[i]).prop(['name', 'value']);
 
             return iValue;
         },
@@ -3585,7 +3582,7 @@
                     $[iMethod](
                         this.action  +
                             (this.action.match(/\w+=[^&]+/) ? '&' : '')  +
-                            $.param( $_Form.serializeArray() ),
+                            $_Form.serialize(),
                         AJAX_Ready
                     );
             } else
