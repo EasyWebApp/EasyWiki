@@ -5,7 +5,7 @@ set_time_limit(0);
 
 /* ---------- 基础库 ---------- */
 
-require_once('php/EasyLibs.php');
+require_once('php/EasyWiki.php');
 
 if (version_compare('5.4.0', PHP_VERSION) > 0)
     define('JSON_PRETTY_PRINT', null);
@@ -14,18 +14,10 @@ function Local_CharSet($_Raw,  $_Raw_CS = 'UTF-8') {
     return  iconv($_Raw_CS, ini_get('default_charset'), $_Raw);
 }
 
-function iEncrypt($_Raw,  $_Salt = null) {
-    $_Salt = $_Salt  ?  $_Salt  :  (time() + mt_rand(100, mt_getrandmax()));
-
-    return array(
-        'salt'  =>  $_Salt,
-        'code'  =>  md5( "{$_Raw}{$_Salt}" )
-    );
-}
-
 /* ---------- 通用逻辑 ---------- */
 
-$_Auth = array('Admin', 'Director', 'Writer', 'Reader');
+$_Wiki_System = new EasyWiki('data');
+
 
 $_No_Need = array(
     'logIn'    =>  array(
@@ -54,33 +46,14 @@ function API_Filter($_Type, $_Model, $_Method) {
         return true;
 }
 
-$_SQL_DB = new SQLite('data/EasyWiki');
 
 $_HTTP_Server = new HTTPServer(false,  function ($_Route, $_Request) {
-    global  $_SQL_DB, $_HTTP_Server;
+    global  $_HTTP_Server, $_Wiki_System;
 
     if (API_Filter('logIn', $_Route[0], $_Request->method))  return;
 
-    $_SQL_DB->createTable('Entry', array(
-        'EID'     =>  'Integer Primary Key AutoIncrement',
-        'Type'    =>  'Integer default 0',
-        'Title'   =>  'Text not Null Unique',
-        'AID'     =>  'Integer not Null',
-        'Source'  =>  'Text'
-    ));
-
-    $_SQL_DB->createTable('User', array(
-        'UID'       =>  'Integer Primary Key AutoIncrement',
-        'Email'     =>  'Text not Null Unique',
-        'Salt'      =>  'Integer not Null',
-        'PassWord'  =>  'Text not Null',
-        'Auth'      =>  'Integer default 1',
-        'cTime'     =>  'Integer not Null',
-        'aTime'     =>  'Integer default 0'
-    ));
-
-    $_User = $_SQL_DB->query(array(
-        'select'  =>  '*',
+    $_User = $_Wiki_System->dataBase->query(array(
+        'select'  =>  'aTime',
         'from'    =>  'User'
     ));
     switch (count( $_User )) {
@@ -104,102 +77,8 @@ $_HTTP_Server = new HTTPServer(false,  function ($_Route, $_Request) {
         $_HTTP_Server->setStatus(403);
         return false;
     }
-    return $_User;
 });
 
-function File_Search($_Pattern,  $_Callback = null) {
-    return array_map(
-        function ($_Path) use ($_Callback) {
-            $_Item = array(
-                'cTime'  =>  filectime($_Path),
-                'mTime'  =>  filemtime($_Path)
-            );
-            $_Path = iconv(ini_get('default_charset'), 'UTF-8', $_Path);
-
-            $_Item['title'] = pathinfo($_Path, PATHINFO_FILENAME);
-
-            if (is_callable( $_Callback ))
-                $_Item = call_user_func($_Callback, $_Path, $_Item);
-
-            return $_Item;
-        },
-        glob($_Pattern)
-    );
-}
-
-function Session_Bind(&$_User, &$_Profile) {
-    global $_Auth;
-
-    $_Profile['UID'] = $_User['UID'];
-
-    $_Profile['auth'] = json_decode(
-        file_get_contents("data/Auth/{$_Auth[$_User['Auth']]}.json"),  true
-    );
-    $_SESSION = $_Profile;
-
-    return $_Profile;
-}
-
-function Login() {
-    global $_SQL_DB;
-
-    $_User = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL)  ?
-        $_SQL_DB->query(array(
-            'select'  =>  '*',
-            'from'    =>  'User',
-            'where'   =>  "Email = '{$_POST['email']}'"
-        )) :
-        array();
-
-    if (! count($_User))
-        return  array('message' => "该电邮未注册！");
-
-    $_PassWord = iEncrypt($_POST['password'], $_User[0]['Salt']);
-
-    if ($_PassWord['code'] != $_User[0]['PassWord'])
-        return array('message' => "密码错误！");
-
-    if (
-        ($_User[0]['UID'] === 0)  &&
-        ($_User[0]['aTime'] === 0)  &&
-        (! isset( $_SESSION['UID'] ))
-    ) {
-        $_SQL_DB->User->delete("UID = {$_User[0]['UID']}");
-        return array(
-            'message'  =>  "管理员账号未及时登录，系统初始化失败，须重新注册管理员！"
-        );
-    }
-    $_UID = $_User[0]['UID'];
-
-    $_SQL_DB->User->update("UID = '{$_UID}'", array(
-        'aTime'  =>  time()
-    ));
-
-    $_Profile = $_SQL_DB->query(array(
-        'select'  =>  '*',
-        'from'    =>  'Profile',
-        'where'   =>  "UID = {$_UID}"
-    ));
-
-    Session_Bind($_Profile[0], $_User[0]);
-
-    $_Profile[0]['message'] = "欢迎进入 EasyWiki 的世界！";
-
-    return $_Profile[0];
-}
-
-function New_Entry($_Type,  $_Name,  $_MarkDown,  $_URL = null) {
-    global $_SQL_DB;
-
-    file_put_contents("../data/{$_Name}.md", $_MarkDown);
-
-    $_SQL_DB->Entry->insert(array(
-        'Type'    =>  $_Type,
-        'Title'   =>  $_Name,
-        'AID'     =>  $_SESSION['UID'],
-        'Source'  =>  $_URL
-    ));
-}
 
 /* ---------- 业务逻辑 ---------- */
 
@@ -208,7 +87,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
     $_KeyWord = Local_CharSet( $_GET['keyword'] );
 
     return json_encode(
-        File_Search("../data/*{$_KeyWord}*.md",  function ($_Path, $_Entry) {
+        EasyWiki::searchFile("../data/*{$_KeyWord}*.md",  function ($_Path, $_Entry) {
             $_Entry['URL'] = substr($_Path, 3);
             return $_Entry;
         })
@@ -226,92 +105,30 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
             )
         )
     ));
-})->on('Post',  'user/',  function () {
+})->on('Post',  'user/',  function () use ($_HTTP_Server, $_Wiki_System) {
 
-    global $_SQL_DB, $_HTTP_Server;
-
-    $_User = func_get_arg(2);
-    $_IPA = $_HTTP_Server->request->IPAddress;
-    $_Auth = 1;
-
-    if (! count($_User)) {
-        if (($_IPA != '127.0.0.1')  &&  ($_IPA != '::1'))
-            return json_encode(array(
-                'message'  =>  "请站长在 <em>localhost</em> 完成“管理员”账号的初始化……"
-            ));
-        $_Auth = 0;
-    }
-
-    if (! filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL))
-        return json_encode(array(
-            'message'  =>  "请填写规范的 Email 地址！"
-        ));
-
-    $_PassWord = iEncrypt( $_POST['password'] );
-
-    if (! $_SQL_DB->User->insert(array(
-        'Email'     =>  $_POST['email'],
-        'Salt'      =>  $_PassWord['salt'],
-        'PassWord'  =>  $_PassWord['code'],
-        'Auth'      =>  $_Auth,
-        'cTime'     =>  time()
-    )))
-        return json_encode(array(
-            'message'  =>  "该电邮已注册！"
-        ));
-
-    $_SQL_DB->createTable('Profile', array(
-        'UID'       =>  'Integer not Null',
-        'NickName'  =>  'Text not Null',
-        'Gender'    =>  'Integer default 0',
-        'Portrait'  =>  'Text'
-    ));
-
-    $_User = $_SQL_DB->query(array(
-        'select'  =>  'UID',
-        'from'    =>  'User',
-        'where'   =>  "Email = '{$_POST['email']}'"
-    ));
-
-    $_Profile = array_map(
-        function ($_Value) {
-            return  is_array($_Value) ? $_Value[0] : $_Value;
-        },
-        filter_input_array(INPUT_POST, array(
-            'NickName'  =>  FILTER_SANITIZE_STRING,
-            'Gender'    =>  array(
-                'filter'   =>  FILTER_VALIDATE_INT,
-                'options'  =>  array(
-                    'min_range'  =>  0,
-                    'max_range'  =>  2,
-                )
-            ),
-            'Portrait'  =>  FILTER_VALIDATE_URL
-        ))
+    return json_encode(
+        $_Wiki_System->addUser( $_HTTP_Server->request->IPAddress )
     );
-    $_SQL_DB->Profile->insert( Session_Bind($_Profile, $_User[0]) );
 
-    return json_encode(array(
-        'message'  =>  "注册成功！请立即登录此账号以激活~"
-    ));
-
-})->on('Post',  'online/',  function () {
+})->on('Post',  'online/',  function () use ($_Wiki_System) {
 
     if (count( $_SESSION ))
         $_Return = $_SESSION;
     else
-        $_Return = isset( $_POST['email'] )  ?  Login()  :  array(
-            'auth'  =>  json_decode(
-                file_get_contents('data/Auth/Reader.json'),  true
-            )
-        );
+        $_Return = isset( $_POST['email'] )  ?
+            $_Wiki_System->login()  :  array(
+                'auth'  =>  json_decode(
+                    file_get_contents('data/Auth/Reader.json'),  true
+                )
+            );
     return json_encode($_Return);
 
 })->on('Delete',  'online/',  function () {
 
     $_SESSION = array();
 
-})->on('Post',  'entry/',  function () {
+})->on('Post',  'entry/',  function () use ($_Wiki_System) {
 
     $_Param = filter_input_array(INPUT_POST, array(
         'title'  =>  array(
@@ -343,7 +160,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         $_Param['title']  ?  $_POST['title']  :  $_Marker->title
     );
 
-    New_Entry($_Name, $_POST['Source_MD']);
+    $_Wiki_System->addEntry($_Name, $_POST['Source_MD']);
 
     return json_encode(array(
         'message'  =>  "词条更新成功！"
@@ -371,9 +188,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 
     return json_encode($_Return);
 
-})->on('Post',  'spider/',  function () {
-
-    global $_SQL_DB;
+})->on('Post',  'spider/',  function () use ($_Wiki_System) {
 
     if (! filter_input(INPUT_POST, 'url', FILTER_VALIDATE_URL))
         return json_encode(array());
@@ -387,10 +202,10 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         preg_match($_POST['name'], $_POST['url'], $_Name);
         $_Name = $_Name[1];
     }
-    New_Entry(0, $_Name, $_Marker->convert(), $_POST['url']);
+    $_Wiki_System->addEntry(0, $_Name, $_Marker->convert(), $_POST['url']);
 
     //  Fetch History
-    $_SQL_DB->createTable('Fetch', array(
+    $_Wiki_System->dataBase->createTable('Fetch', array(
         'PID'    =>  'Integer Primary Key AutoIncrement',
         'URL'    =>  'Text not Null Unique',
         'Times'  =>  'Integer default 0',
@@ -399,12 +214,12 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
     foreach ($_Marker->link['inner'] as $_Link) {
         $_Title = trim( $_Link->getAttribute('title') );
 
-        $_SQL_DB->Fetch->insert(array(
+        $_Wiki_System->dataBase->Fetch->insert(array(
             'URL'    =>  $_Link->getAttribute('href'),
             'Title'  =>  $_Title ? $_Title : $_Link->textContent
         ));
     }
-    $_SQL_DB->Fetch->update("URL = '{$_POST['url']}'", array(
+    $_Wiki_System->dataBase->Fetch->update("URL = '{$_POST['url']}'", array(
         'Times'  =>  1
     ));
 
@@ -412,7 +227,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         'header'    =>    array(
             'Content-Type'  =>  'application/json'
         ),
-        'data'      =>    $_SQL_DB->query(array(
+        'data'      =>    $_Wiki_System->dataBase->query(array(
             'select'  =>  'URL, Title',
             'from'    =>  'Fetch',
             'where'   =>  'Times = 0'
@@ -421,7 +236,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
 })->on('Get',  'auth/',  function ($_Path) {
 
     if (empty( $_Path[1] ))
-        $_Return = File_Search('data/Auth/*.json');
+        $_Return = EasyWiki::searchFile('data/Auth/*.json');
     else {
         $_Auth = json_decode(
             file_get_contents("data/Auth/{$_Path[1]}.json"),  true

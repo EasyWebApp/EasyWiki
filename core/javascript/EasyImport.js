@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-03-30)  Stable
+//      [Version]    v1.0  (2016-04-01)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -3550,45 +3550,51 @@
     };
 
     /* ----- Form Element AJAX Submit ----- */
+
     $.fn.ajaxSubmit = function (iCallback) {
         if (! this.length)  return this;
 
-        var $_Form = (
-                (this[0].tagName.toLowerCase() == 'form') ?
-                    this : this.find('form')
-            ).eq(0);
-        if (! $_Form.length)  return this;
-
-        var $_Button = $_Form.find(':button').attr('disabled', true);
-
-        function AJAX_Ready() {
-            $_Button.prop('disabled', false);
-            iCallback.apply($_Form[0], arguments);
-        }
-
-        $_Form.on('submit',  function (iEvent) {
+        function AJAX_Submit(iEvent) {
             iEvent.preventDefault();
             iEvent.stopPropagation();
-            $_Button.attr('disabled', true);
 
-            var iMethod = ($_Form.attr('method') || 'Get').toLowerCase();
+            var $_Form = $(this);
 
-            if ( this.checkValidity() )  switch (iMethod) {
+            if ((! this.checkValidity())  ||  $_Form.data('_AJAX_Submitting_'))
+                return;
+
+            $_Form.data('_AJAX_Submitting_', 1);
+
+            var iMethod = (this.method || 'Get').toLowerCase();
+
+            function AJAX_Ready() {
+                $_Form.data('_AJAX_Submitting_', 0);
+                iCallback.apply($_Form[0], arguments);
+            }
+  
+            switch (iMethod) {
                 case 'post':      ;
-                case 'put':
-                    $[iMethod](this.action, this, AJAX_Ready);    break;
-                case 'get':       ;
+                case 'put':       ;
                 case 'delete':
+                    $[iMethod](this.action, this, AJAX_Ready);    break;
+                case 'get':       {
+                    var iURL = $.split(this.action, '?', 2);
+
                     $[iMethod](
-                        this.action  +
-                            (this.action.match(/\w+=[^&]+/) ? '&' : '')  +
-                            $_Form.serialize(),
+                        iURL[0] + '?' + (
+                            iURL[1]  ?  (iURL[1] + '&')  :  ''
+                        ) + $_Form.serialize(),
                         AJAX_Ready
                     );
-            } else
-                $_Button.prop('disabled', false);
-        });
-        $_Button.prop('disabled', false);
+                }
+            }
+        }
+        var $_Form = this.filter('form');
+
+        if ( $_Form[0] )
+            $_Form.submit(AJAX_Submit);
+        else
+            this.on('submit', 'form:visible', AJAX_Submit);
 
         return this;
     };
