@@ -160,7 +160,7 @@ $_HTTP_Server->on('Get',  'entry/',  function () {
         $_Param['title']  ?  $_POST['title']  :  $_Marker->title
     );
 
-    $_Wiki_System->addEntry($_Name, $_POST['Source_MD']);
+    $_Wiki_System->addEntry($_POST['type'], $_Name, $_POST['Source_MD']);
 
     return json_encode(array(
         'message'  =>  "词条更新成功！"
