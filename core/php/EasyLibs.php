@@ -3,7 +3,7 @@
 //                >>>  EasyLibs.php  <<<
 //
 //
-//      [Version]    v2.3  (2016-04-05)  Stable
+//      [Version]    v2.3  (2016-04-08)  Stable
 //
 //      [Require]    PHP v5.3+
 //
@@ -734,8 +734,8 @@ class HTTPClient {
     public function post($_URL,  $_Data,  $_Header = array()) {
         return  $this->request('POST', $_URL, $_Data, $_Header);
     }
-    public function delete($_URL,  $_Header = array()) {
-        return  $this->request('DELETE', $_URL, $_Header);
+    public function delete($_URL,  $_Data,  $_Header = array()) {
+        return  $this->request('DELETE', $_URL, $_Data, $_Header);
     }
     public function put($_URL,  $_Data,  $_Header = array()) {
         return  $this->request('PUT', $_URL, $_Data, $_Header);

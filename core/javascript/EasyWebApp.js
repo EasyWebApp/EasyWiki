@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.3  (2016-04-07)  Stable
+//      [Version]    v2.3  (2016-04-11)  Stable
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -150,22 +150,23 @@
             $_Page = $_Page ? $($_Page) : this.$_Page;
 
             var iHistory = this.ownerApp.history;
+            var iForward = iHistory.isForward(this);
 
             if (! $_Page) {
-                if (iHistory.lastIndex > 1) {
+                if (this.sourceLink.type != 'Inner')
+                    BOM.history[iForward ? 'forward' : 'back']();
+                else {
                     this.sourceLink = new PageLink(
                         this.ownerApp,  this.sourceLink.valueOf()
                     );
-                    this.sourceLink.loadTemplate();
+                    this.sourceLink.$_DOM[0].click();
                 }
                 return this;
             }
 
-            var $_Target = (
-                    iHistory.isForward(this) ? this : iHistory.last(true)
-                ).sourceLink.getTarget();
+            var $_Target = this.sourceLink.getTarget();
 
-            if (iHistory.length)  iHistory.move( $_Target );
+            if (iHistory.length || iForward)  iHistory.move( $_Target );
 
             this.$_Page = $_Page.appendTo( $_Target ).fadeIn();
 
@@ -227,11 +228,10 @@
         move:         function () {
             if ($.isPlainObject( arguments[0] ))
                 var iState = arguments[0];
-            else
+            else {
                 var $_Target = arguments[0];
-
-            $.ListView.findView(this.root, true);
-
+                $.ListView.findView(this.root, true);
+            }
             var $_Page = ($_Target || this.root).children().detach();
 
             if ((! iState)  ||  ((iState.DOM_Index + 2) == this.length))
@@ -341,7 +341,9 @@
         if (! ($_Root instanceof $))
             $_Root = $($_Root);
 
-        var Split_Index = API_Root  &&  (API_Root.match(/(\w+:)?\/\//) || [ ]).index;
+        var Split_Index = API_Root && (
+                API_Root.match(/(\w+:)?\/\//) || [ ]
+            ).index;
         API_Root = Split_Index ? [
             API_Root.slice(Split_Index),
             API_Root.slice(0, Split_Index)
@@ -356,6 +358,16 @@
             proxy:        API_Root[1] || ''
         });
         this.dataStack = new DataStack(this.history);
+
+        if (! (this.apiRoot && this.proxy))  return;
+
+        var This_App = this;
+
+        $.ajaxPrefilter(function (iOption) {
+            if (iOption.url.indexOf( This_App.apiRoot ))  return;
+
+            iOption.url = This_App.proxy + BOM.encodeURIComponent(iOption.url);
+        });
     }
 
     var RE_Str_Var = /\{(.+?)\}/g;
@@ -388,9 +400,7 @@
         ))
             iURL = this.apiRoot + iURL;
 
-        return  this.proxy + (
-            this.proxy ? BOM.encodeURIComponent(iURL) : iURL
-        );
+        return iURL;
     };
 
 /* ---------- Auto Navigation ---------- */
@@ -432,17 +442,11 @@
                 API_URL = this.getURL('src');
 
             function AJAX_Ready(iData) {
-                API_URL = API_URL || iLink.getURL('action');
-
                 iData = This_App.domRoot.triggerHandler('apiCall', [
                     This_App,
                     {
                         method:    iLink.method,
-                        URL:       This_App.proxy  ?
-                            BOM.decodeURIComponent(
-                                API_URL.slice(This_App.proxy.length)
-                            ) :
-                            API_URL,
+                        URL:       API_URL || iLink.getURL('action'),
                         data:      iData
                     },
                     This_App.history.last().HTML
