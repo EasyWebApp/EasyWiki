@@ -36,7 +36,7 @@
             }),
             'list',
             function () {
-                this.$_View.attr('class', '');
+                arguments[0].$_View.attr('class', '');
             },
             function () {
                 var $_Target = $(arguments[0].target);

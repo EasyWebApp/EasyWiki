@@ -41,7 +41,11 @@ html, body {
     font-size:      1.4em;
 }
 #Main_Nav > li > ul > li > a {
-    border-left:    0.3em  solid  transparent;
+        border-left:    0.3em  solid  transparent;
+   -moz-transition:     0.25s;
+     -o-transition:     0.25s;
+-webkit-transition:     0.25s;
+        transition:     0.25s;
 }
 #Main_Nav ul > li:hover > a,
 #Main_Nav ul > li.active > a {
