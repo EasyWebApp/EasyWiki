@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-04-15)  Stable
+//      [Version]    v1.0  (2016-04-19)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -379,6 +379,25 @@
                 }
 
                 return iResult;
+            },
+            intersect:        function () {
+                if (arguments.length < 2)  return arguments[0];
+
+                var iArgs = this.makeArray( arguments );
+                var iArray = this.likeArray( iArgs[0] );
+
+                iArgs[0] = this.map(iArgs.shift(),  function (iValue, iKey) {
+                    if ( iArray ) {
+                        if (iArgs.indexOf.call(iArgs[0], iValue)  >  -1)
+                            return iValue;
+                    } else if (
+                        (iArgs[0][iKey] !== undefined)  &&
+                        (iArgs[0][iKey] === iValue)
+                    )
+                        return iValue;
+                });
+
+                return  arguments.callee.apply(this, iArgs);
             }
         };
 
@@ -537,23 +556,24 @@
 
             if (iName) {
                 iStyle = iStyle.getPropertyValue(iName);
-                var iNumber = parseFloat(iStyle);
-                iStyle = isNaN(iNumber) ? iStyle : iNumber;
+                if (iStyle.indexOf(' ') == -1) {
+                    var iNumber = parseFloat(iStyle);
+                    iStyle = isNaN(iNumber) ? iStyle : iNumber;
+                }
             }
             return iStyle;
         },
-        PX_Needed:     _Object_.makeSet(
-            'width',  'min-width',  'max-width',
-            'height', 'min-height', 'max-height',
-            'margin', 'padding',
-            'top',    'left',
-            'border-radius'
-        ),
+        PX_Needed:
+            RegExp([
+                'width', 'height', 'margin', 'padding',
+                'top', 'right', 'bottom',  'left',
+                'border-radius'
+            ].join('|')),
         Set_Method:    _Browser_.modern ? 'setProperty' : 'setAttribute',
         set:           function (iElement, iName, iValue) {
             if (_Object_.type(iElement) in Type_Info.DOM.root)  return false;
 
-            if ((! isNaN( Number(iValue) ))  &&  this.PX_Needed[iName])
+            if ((! isNaN( Number(iValue) ))  &&  iName.match(this.PX_Needed))
                 iValue += 'px';
 
             if (iElement)
@@ -1653,22 +1673,26 @@
         }
     }
 
-    $.fn.value = function (iFiller) {
-        var $_Name = this.filter('*[name]');
-        $_Name = $_Name.length ? $_Name : this.find('*[name]');
+    $.fn.value = function (iAttr, iFiller) {
+        if (typeof iAttr == 'function') {
+            iFiller = iAttr;
+            iAttr = '';
+        }
+        var $_Value = iAttr  ?  this.filter('[' + iAttr + ']')  :  this;
+        $_Value = $_Value.length  ?  $_Value  :  this.find('[' + iAttr + ']');
 
-        if (! iFiller)  return Value_Operator.call($_Name[0]);
+        if (! iFiller)  return Value_Operator.call($_Value[0]);
 
-        var $_This = this,  Data_Set = (typeof iFiller != 'function');
+        var Data_Set = (typeof iFiller != 'function');
 
-        for (var i = 0, iName;  i < $_Name.length;  i++) {
-            iName = $_Name[i].getAttribute('name');
+        for (var i = 0, iKey;  i < $_Value.length;  i++) {
+            iKey = iAttr && $_Value[i].getAttribute(iAttr);
 
             Value_Operator.call(
-                $_Name[i],
-                Data_Set  ?  iFiller[iName]  :  iFiller.call(
-                    $_Name[i],  iName,  i,  $_Name
-                )
+                $_Value[i],
+                Data_Set  ?  iFiller[iKey]  :  iFiller.apply($_Value[i], [
+                    iKey || Value_Operator.call($_Value[i]),  i,  $_Value
+                ])
             );
         }
         return this;
@@ -2230,7 +2254,9 @@
                         'on' + iEvent.type,  $.extend(iEvent.originalEvent, iEvent)
                     );
                 else
-                    $.event.dispatch(iEvent);
+                    BOM.setTimeout(function () {
+                        $.event.dispatch(iEvent);
+                    });
             }
             return this;
         },
@@ -2851,13 +2877,15 @@
 
         var iEvent = arguments.callee.caller.arguments[0];
 
-        $.event.dispatch(
-            ((iEvent instanceof $.Event)  &&  (iEvent.type == iType))  ?
-                iEvent : {
-                    type:      iType,
-                    target:    this
-                }
-        );
+        BOM.setTimeout(function () {
+            $.event.dispatch(
+                ((iEvent instanceof $.Event)  &&  (iEvent.type == iType))  ?
+                    iEvent : {
+                        type:      iType,
+                        target:    $_This[0]
+                    }
+            );
+        });
     }
     $.extend(HTMLFormElement.prototype, {
         submit:    $.proxy(Fake_Bubble, null, 'submit', _Submit_),
@@ -3104,31 +3132,42 @@
                 .css( arguments[0] );
     }
 
-    $.fn.animate = function (CSS_Final) {
-        if (! this[0])  return this;
+    $.fn.extend({
+        animate:    function (CSS_Final) {
+            if (! this[0])  return this;
 
-        var iArgs = $.makeArray(arguments).slice(1);
+            var iArgs = $.makeArray(arguments).slice(1),
+                iCSS = Object.getOwnPropertyNames( CSS_Final );
 
-        this.data('_CSS_Animate_', this.css(
-            Object.getOwnPropertyNames( CSS_Final )
-        ));
+            this.data('_CSS_Animate_',  function () {
+                return  $.extend(arguments[1], $(this).css(iCSS));
+            });
 
-        return (
-            ($.browser.msie < 10)  ?  KeyFrame_Animate  :  Transition_Animate
-        ).call(
-            this,
-            CSS_Final,
-            isNaN(Number( iArgs[0] ))  ?  0.4  :  (iArgs.shift() / 1000),
-            (typeof iArgs[0] == 'string')  ?  iArgs.shift()  :  '',
-            (typeof iArgs[0] == 'function')  &&  iArgs[0]
-        );
-    };
-
-    $.fn.stop = function () {
-        return  this.data('_Animate_', 0);
-    };
+            return (
+                (($.browser.msie < 10)  ||  (! $.isEmptyObject(
+                    $.intersect($.makeSet.apply($, iCSS),  Animate_Property)
+                ))) ?
+                    KeyFrame_Animate  :  Transition_Animate
+            ).call(
+                this,
+                CSS_Final,
+                isNaN(Number( iArgs[0] ))  ?  0.4  :  (iArgs.shift() / 1000),
+                (typeof iArgs[0] == 'string')  ?  iArgs.shift()  :  '',
+                (typeof iArgs[0] == 'function')  &&  iArgs[0]
+            );
+        },
+        stop:       function () {
+            return  this.data('_Animate_', 0);
+        }
+    });
 
     /* ----- Animation ShortCut ----- */
+
+    var PX_Attr = RegExp([
+            'width', 'height', 'margin', 'padding',
+            'top', 'right', 'bottom',  'left',
+            'border-radius'
+        ].join('|'));
 
     $.fn.extend($.map({
         fadeIn:     {opacity:  1},
@@ -3154,12 +3193,9 @@
             return  this.animate.apply(this, $.merge(
                 [$.map(CSS_Next,  function (iValue, iKey) {
                     if (iValue == 'auto') {
-                        iValue = Last_Valid_CSS.call($_This, iKey);
-                        if (
-                            (parseFloat(iValue) == 0)  &&
-                            (! iValue.match(/\s/))
-                        )
-                            iValue = CSS_Prev[iKey];
+                        iValue = (CSS_Prev || { })[iKey];
+                        if (iKey.match( PX_Attr ))
+                            Last_Valid_CSS.call($_This, iKey);
                     }
                     return  iValue || CSS_Next[iKey];
                 })],
@@ -3389,21 +3425,16 @@
                 if (! (_DOM_.body && _DOM_.body.childNodes.length))
                     return;
 
-                var $_Content = $(iSelector || 'body > *',  _DOM_);
-                if (! $_Content.length)
-                    $_Content = _DOM_.body.childNodes;
+                var $_Content = $(iSelector || 'body > *',  _DOM_).not('script');
 
-                if (
-                    (typeof iCallback == 'function')  &&
-                    (false === iCallback.call(
-                        $_iFrame[0],  $($.merge(
-                            $.makeArray($(
-                                'head style, head link[rel="stylesheet"]',  _DOM_
-                            )),
-                            $_Content
-                        ))
+                if (iCallback  &&  (false === iCallback.call(
+                    $_iFrame[0],  $($.merge(
+                        $.makeArray($(
+                            'head style, head link[rel="stylesheet"]',  _DOM_
+                        )),
+                        $_Content[0] ? $_Content : _DOM_.body.childNodes
                     ))
-                )
+                )))
                     $_iFrame.remove();
 
                 return false;

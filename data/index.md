@@ -54,3 +54,14 @@ PHP + SQLite
 | URL   | http://www.zzbaike.com/wiki/%E4%BA%92%E8%81%94%E7%BD%91 |
 | 正则   | /\/wiki\/((%\w{2})+)/                                   |
 | 选择符 | #firstHeading, #catlinks, .mw-content-ltr               |
+
+
+## 【二次开发】
+
+### 基础技术
+
+ 1. **iQuery**（对 jQuery API 的精简与拓展）
+ 2. **EasyImport.js**（简单、可靠的 JS 异步加载器）
+ 3. **EasyWebUI**（类 BootStrap CSS 框架）
+ 4. **EasyWebApp**（基于 jQuery API 的单页应用引擎）
+ 5. **EasyLibs.php**（基于 PHP v5.3+ 的后端类库）
