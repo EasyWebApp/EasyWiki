@@ -253,13 +253,13 @@ class SQLDB {
     private $dataBase;
     private $table = array();
 
-    private function SQLite($_Type, $_Base_Name) {
-        if (! ($_Base_Name instanceof FS_Directory))
-            new FS_Directory( pathinfo($_Base_Name, PATHINFO_DIRNAME) );
+    private function SQLite($_Type, $_Name) {
+        if (! ($_Name instanceof FS_Directory))
+            new FS_Directory( pathinfo($_Name, PATHINFO_DIRNAME) );
 
-        if ($_Base_Name[0] != '/')  $_Base_Name = './' . $_Base_Name;
+        if ($_Name[0] != '/')  $_Name = './' . $_Name;
 
-        return  new PDO(strtolower($_Type) . ":{$_Base_Name}.db");
+        return  new PDO(strtolower($_Type) . ":{$_Name}.db");
     }
 
     private function MySQL(
@@ -284,13 +284,13 @@ class SQLDB {
         );
     }
 
-    public function __construct($_Type) {
+    public function __construct($_Type, $_Name) {
         try {
             $this->dataBase = call_user_func_array(
                 array($this, $_Type),  func_get_args()
             );
         } catch (PDOException $_Error) {
-            echo '[Error - '.basename($_Base_Name).']  '.$_Error->getMessage();
+            echo '[Error - '.basename($_Name).']  '.$_Error->getMessage();
         }
     }
 

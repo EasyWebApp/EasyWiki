@@ -28,10 +28,9 @@ class EasyWiki {
     public $dataBase;
 
     public function __construct($_Data_Path) {
-        $_DB = ini_get_all('sqlite3');
-        $_DB = empty( $_DB )  ?
-            array('MySQL', 'EasyWiki')  :
-            array('SQLite', "{$_Data_Path}/EasyWiki");
+        $_DB = function_exists('sqlite_open')  ?
+            array('SQLite', "{$_Data_Path}/EasyWiki")  :
+            array('MySQL', 'EasyWiki');
 
         $this->dataBase = new SQLDB($_DB[0], $_DB[1]);
 
