@@ -28,7 +28,12 @@ class EasyWiki {
     public $dataBase;
 
     public function __construct($_Data_Path) {
-        $this->dataBase = new SQLite("{$_Data_Path}/EasyWiki");
+        $_DB = ini_get_all('sqlite3');
+        $_DB = empty( $_DB )  ?
+            array('MySQL', 'EasyWiki')  :
+            array('SQLite', "{$_Data_Path}/EasyWiki");
+
+        $this->dataBase = new SQLDB($_DB[0], $_DB[1]);
 
         $this->dataBase->createTable('Entry', array(
             'EID'     =>  'Integer Primary Key AutoIncrement',

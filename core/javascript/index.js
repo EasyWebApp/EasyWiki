@@ -2,7 +2,7 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.9  (2016-03-31)  Beta
+//      [Version]    v0.9  (2016-04-20)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -27,40 +27,10 @@
 
     var $_MainView = $('#Main_View');
 
-    var iMainNav = $.TreeView(
-            $.ListView('#Main_Nav',  function ($_Item, iValue) {
-
-                $('a[rel="nofollow"]', $_Item[0]).text(iValue.text)[0].href =
-                    '#' + iValue.id;
-                $_Item.attr('title', iValue.text);
-            }),
-            'list',
-            function () {
-                arguments[0].$_View.attr('class', '');
-            },
-            function () {
-                var $_Target = $(arguments[0].target);
-
-                if ( $_Target.is('a[rel="nofollow"]') )
-                    return (
-                        '*[id="'  +  $_Target.attr('href').slice(1)  +  '"]'
-                    );
-            }
-        ).linkage($_MainView,  function ($_Anchor) {
-            $_Anchor = $_Anchor.prevAll('h1, h2, h3');
-
-            if (! $.contains(this, $_Anchor[0]))  return;
-
-            $_Anchor = $('#Main_Nav a[href="#' + $_Anchor[0].id + '"]');
-
-            $('#Main_Nav li.active').removeClass('active');
-
-            $.ListView.getInstance( $_Anchor.parents('ul')[0] )
-                .focus( $_Anchor[0].parentNode );
-        });
+    var $_MainNav = $('#Main_Nav').iReadNav( $_MainView );
 
     var $_Body = $(DOM.body).swipe(function () {
-            iMainNav.unit.$_View[
+            $_MainNav[
                 (arguments[0].deltaX < 0)  ?  'show'  :  'hide'
             ]();
         });
@@ -259,23 +229,8 @@
                     TP_Param.category ? 1 : 0;
             }
         }
-        if ( $_Body.hasClass('Not_Entry') )
-            return iMainNav.unit.clear();
+        $_MainView.trigger($_Body.hasClass('Not_Entry') ? 'Clear' : 'Refresh');
 
-        iMainNav.bind(
-            $('h1, h2, h3', this),
-            function ($_A, $_B) {
-                return  $_B.tagName[1] - $_A.tagName[1];
-            },
-            function () {
-                if (this.id == '-')  this.id = $.uuid('Header');
-
-                return {
-                    id:      this.id,
-                    text:    $(this).text()
-                };
-            }
-        );
     }).WebApp();
 
 })(self, self.document, self.iQuery);

@@ -290,6 +290,8 @@
         };
         var iTree = this.on('branch', onFork);
 
+        iKey = iKey || 'list';
+
         this.unit = iListView.on('insert',  function ($_Item, iValue) {
             if ( iValue[iKey] )
                 iTree.branch(this, $_Item, iValue[iKey]);

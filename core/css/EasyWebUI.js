@@ -2,7 +2,7 @@
 //          >>>  EasyWebUI Component Library  <<<
 //
 //
-//      [Version]     v2.1  (2016-04-19)  Stable
+//      [Version]     v2.2  (2016-04-20)  Stable
 //
 //      [Based on]    iQuery v1  or  jQuery (with jQuery+),
 //
@@ -679,6 +679,69 @@
         });
     };
 
+/* ---------- 阅读导航栏  v0.1 ---------- */
+
+    $.fn.iReadNav = function ($_Context) {
+        return  this.each(function () {
+            var iMainNav = $.TreeView(
+                    $.ListView(this,  function ($_Item, iValue) {
+
+                        $('a', $_Item[0]).text(iValue.text)[0].href =
+                            '#' + iValue.id;
+                        $_Item.attr('title', iValue.text);
+                    }),
+                    null,
+                    function () {
+                        arguments[0].$_View.attr('class', '');
+                    },
+                    function () {
+                        var iTarget = arguments[0].target;
+
+                        if (iTarget.tagName.toLowerCase() == 'a')
+                            return (
+                                '*[id="'  +  iTarget.href.split('#')[1]  +  '"]'
+                            );
+                    }
+                );
+            iMainNav.linkage($_Context,  function ($_Anchor) {
+                $_Anchor = $_Anchor.prevAll('h1, h2, h3');
+
+                if (! $.contains(this, $_Anchor[0]))  return;
+
+                $_Anchor = $(
+                    'a[href="#' + $_Anchor[0].id + '"]',  iMainNav.unit.$_View[0]
+                );
+                $('.ListView_Item.active', iMainNav.unit.$_View[0])
+                    .removeClass('active');
+
+                $.ListView.getInstance( $_Anchor.parents('.TreeNode')[0] )
+                    .focus( $_Anchor[0].parentNode );
+            });
+
+            $_Context.on('Refresh',  function () {
+
+                iMainNav.bind(
+                    $('h1, h2, h3', this),
+                    function ($_A, $_B) {
+                        return  $_B.tagName[1] - $_A.tagName[1];
+                    },
+                    function () {
+                        if (! this.id.match(/\w/))  this.id = $.uuid('Header');
+
+                        return {
+                            id:      this.id,
+                            text:    $(this).text()
+                        };
+                    }
+                );
+                return false;
+
+            }).on('Clear',  function () {
+                return  (! iMainNav.unit.clear());
+            });
+        });
+    };
+
 /* ---------- 目录树  v0.2 ---------- */
 
     function inlineEdit() {
@@ -714,7 +777,9 @@
                     function () {
                         $(':input', this).focus();
 
-                        var iRule = BOM.getMatchedCSSRules(this, ':before')[0];
+                        var iRule = Array.prototype.slice.call(
+                                BOM.getMatchedCSSRules(this, ':before'),  -1
+                            )[0];
 
                         if (! $(iRule.parentStyleSheet.ownerNode).hasClass(
                             'iQuery_CSS-Rule'
