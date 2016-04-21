@@ -784,8 +784,9 @@ ul.NavBar > li:active {
 
 /* ----- DropDown Menu ----- */
 .DropDown.Head {
-    position:      relative;
+    display:       inline-block;
     min-height:    1.5em;
+    position:      relative;
 }
 .DropDown.Body {
     display:       none;

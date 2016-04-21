@@ -23,10 +23,13 @@
 
 (function (BOM, DOM, $) {
 
-    $('body > *').css('max-height',  $(BOM).height() - 220);
+    var wHeight = $(BOM).height();
 
-    var $_MainView = $('#Main_View');
+    $('body > *').css('max-height',  wHeight - 220);
 
+    var $_MainView = $('#Main_View').css(
+            'height',  wHeight - $('#User_Bar').height()
+        );
     var $_MainNav = $('#Main_Nav').iReadNav( $_MainView );
 
     var $_Body = $(DOM.body).swipe(function () {
