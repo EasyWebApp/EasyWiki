@@ -2,7 +2,7 @@
 //          >>>  EasyWebUI Component Library  <<<
 //
 //
-//      [Version]     v2.2  (2016-04-20)  Stable
+//      [Version]     v2.3  (2016-04-21)  Stable
 //
 //      [Based on]    iQuery v1  or  jQuery (with jQuery+),
 //
@@ -16,7 +16,7 @@
 //
 
 
-/* ---------- CSS 3 补丁 ---------- */
+/* ---------- HTML 5 / CSS 3 补丁 ---------- */
 (function (BOM, DOM, $) {
 
 /* ---------- Flex Box 补丁  v0.2 ---------- */
@@ -188,6 +188,57 @@
             }
 
             $_This.before($_List);
+        });
+    };
+
+/* ---------- Input List 补丁  v0.1 ---------- */
+
+    $.fn.smartInput = function () {
+        return  this.each(function () {
+            var iPosition = this.parentNode.style.position;
+
+            if ((! iPosition)  ||  (iPosition == 'static'))
+                $(this.parentNode).css('position', 'relative');
+
+            var $_Input = $(this);
+
+            iPosition = $_Input.position();
+
+            $_Input.css($.extend({
+                position:     'absolute',
+                'z-index':    9999
+            }, iPosition));
+
+            var iSize = $_Input.css([
+                    'font-size',  'width',  'line-height',  'padding'
+                ]);
+            iSize.width = parseFloat(iSize.width) -
+                parseFloat(iSize['font-size']) * 0.4;
+            delete iSize['font-size'];
+
+            $('#' + this.getAttribute('list') + ' > select').css($.extend(
+                {
+                    position:     'absolute',
+                    'z-index':    10000,
+                    opacity:      0
+                },
+                iPosition,
+                iSize
+            )).mousedown(function () {
+
+                if ( $_Input[0].value.trim() ) {
+                    $.wait(0.5,  function () {
+                        $_Input[0].focus();
+                    });
+                    return false;
+                }
+            }).change(function () {
+                $_Input[0].value = this.value;
+
+                BOM.setTimeout(function () {
+                    $_Input[0].focus();
+                });
+            });
         });
     };
 

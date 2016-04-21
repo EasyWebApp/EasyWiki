@@ -548,6 +548,12 @@
     var Code_Indent = _Browser_.modern ? '' : ' '.repeat(4);
 
     _DOM_.Style = {
+        PX_Needed:
+            RegExp([
+                'width', 'height', 'margin', 'padding',
+                'top', 'right', 'bottom',  'left',
+                'border-radius'
+            ].join('|')),
         get:           function (iElement, iName) {
             if ((! iElement)  ||  (_Object_.type(iElement) in Type_Info.DOM.root))
                 return;
@@ -556,19 +562,16 @@
 
             if (iName) {
                 iStyle = iStyle.getPropertyValue(iName);
-                if (iStyle.indexOf(' ') == -1) {
+
+                if ((! iStyle)  &&  iName.match(this.PX_Needed))
+                    iStyle = 0;
+                else if (iStyle.indexOf(' ') == -1) {
                     var iNumber = parseFloat(iStyle);
                     iStyle = isNaN(iNumber) ? iStyle : iNumber;
                 }
             }
             return iStyle;
         },
-        PX_Needed:
-            RegExp([
-                'width', 'height', 'margin', 'padding',
-                'top', 'right', 'bottom',  'left',
-                'border-radius'
-            ].join('|')),
         Set_Method:    _Browser_.modern ? 'setProperty' : 'setAttribute',
         set:           function (iElement, iName, iValue) {
             if (_Object_.type(iElement) in Type_Info.DOM.root)  return false;

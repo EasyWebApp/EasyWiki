@@ -320,7 +320,7 @@ class SQLite extends SQLDB {
 
         new FS_Directory( pathinfo($_Name, PATHINFO_DIRNAME) );
 
-        if ($_Name[0] != '/')  $_Name = './' . $_Name;
+        if (PHP_OS != 'WINNT')  $_Name = __DIR__ . '/' . $_Name;
 
         $this->dataBase = new PDO("sqlite:{$_Name}.db");
     }
