@@ -28,11 +28,11 @@ class EasyWiki {
     public $dataBase;
 
     public function __construct($_Data_Path) {
-        $_DB = function_exists('sqlite_open')  ?
-            array('SQLite', "{$_Data_Path}/EasyWiki")  :
-            array('MySQL', 'EasyWiki');
-
-        $this->dataBase = new SQLDB($_DB[0], $_DB[1]);
+        try {
+            $this->dataBase = new SQLite("{$_Data_Path}/EasyWiki");
+        } catch (PDOException $_Error) {
+            echo '[Error - EasyWiki]  '.$_Error->getMessage();
+        }
 
         $this->dataBase->createTable('Entry', array(
             'EID'     =>  'Integer Primary Key AutoIncrement',
