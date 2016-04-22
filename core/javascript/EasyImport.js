@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-04-19)  Stable
+//      [Version]    v1.0  (2016-04-22)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -3166,12 +3166,6 @@
 
     /* ----- Animation ShortCut ----- */
 
-    var PX_Attr = RegExp([
-            'width', 'height', 'margin', 'padding',
-            'top', 'right', 'bottom',  'left',
-            'border-radius'
-        ].join('|'));
-
     $.fn.extend($.map({
         fadeIn:     {opacity:  1},
         fadeOut:    {opacity:  0},
@@ -3185,7 +3179,7 @@
             overflow:    'auto',
             height:      'auto',
             padding:     'auto',
-            opacity:     'auto'
+            opacity:     1
         }
     },  function (CSS_Next) {
         return  function () {
@@ -3197,10 +3191,11 @@
                 [$.map(CSS_Next,  function (iValue, iKey) {
                     if (iValue == 'auto') {
                         iValue = (CSS_Prev || { })[iKey];
-                        if (iKey.match( PX_Attr ))
-                            Last_Valid_CSS.call($_This, iKey);
+                        if ((! iValue)  &&  (iValue !== 0))
+                            iValue = Last_Valid_CSS.call($_This, iKey);
                     }
-                    return  iValue || CSS_Next[iKey];
+                    return  (iValue  ||  (iValue === 0))  ?
+                        iValue : CSS_Next[iKey];
                 })],
                 arguments
             ));

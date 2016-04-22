@@ -410,6 +410,9 @@ input[type="range"].Detail:focus::-ms-fill-lower,
 input[type="range"].Detail:focus::-ms-fill-upper  {
     background:    deepskyblue;
 }
+datalist {
+    display:    none;
+}
 /* ----- iFrame ----- */
 iframe {
     width:    100%;

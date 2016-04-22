@@ -2,7 +2,7 @@
 //          >>>  EasyWebUI Component Library  <<<
 //
 //
-//      [Version]     v2.3  (2016-04-21)  Stable
+//      [Version]     v2.4  (2016-04-22)  Stable
 //
 //      [Based on]    iQuery v1  or  jQuery (with jQuery+),
 //
@@ -191,54 +191,75 @@
         });
     };
 
-/* ---------- Input List 补丁  v0.1 ---------- */
+/* ---------- Input List 补丁  v0.2 ---------- */
+
+    function Tips_Show() {
+        if (! this.height())  this.slideDown(100);
+    }
+
+    function Tips_Hide() {
+        if ( this.height() )  this.slideUp(100);
+
+        return this;
+    }
 
     $.fn.smartInput = function () {
         return  this.each(function () {
-            var iPosition = this.parentNode.style.position;
+            var $_Input = $(this),  iPosition = this.parentNode.style.position;
+
+            if (BOM.HTMLDataListElement  ||  ($_Input.attr('autocomplete') == 'off'))
+                return;
 
             if ((! iPosition)  ||  (iPosition == 'static'))
-                $(this.parentNode).css('position', 'relative');
+                $(this.parentNode).css({
+                    position:    'relative',
+                    zoom:        1
+                });
+            iPosition = $_Input.attr('autocomplete', 'off').position();
+            iPosition.top += $_Input.height();
 
-            var $_Input = $(this);
-
-            iPosition = $_Input.position();
-
-            $_Input.css($.extend({
-                position:     'absolute',
-                'z-index':    9999
-            }, iPosition));
-
-            var iSize = $_Input.css([
-                    'font-size',  'width',  'line-height',  'padding'
-                ]);
-            iSize.width = parseFloat(iSize.width) -
-                parseFloat(iSize['font-size']) * 0.4;
-            delete iSize['font-size'];
-
-            $('#' + this.getAttribute('list') + ' > select').css($.extend(
-                {
+            var $_List = $(
+                    '#' + this.getAttribute('list') + ' > select[multiple]'
+                ).css($.extend(iPosition, {
                     position:     'absolute',
                     'z-index':    10000,
+                    height:       0,
+                    width:        $_Input.width(),
+                    padding:      0,
+                    border:       0,
+                    overflow:     'hidden',
                     opacity:      0
-                },
-                iPosition,
-                iSize
-            )).mousedown(function () {
-
-                if ( $_Input[0].value.trim() ) {
-                    $.wait(0.5,  function () {
-                        $_Input[0].focus();
-                    });
-                    return false;
-                }
-            }).change(function () {
-                $_Input[0].value = this.value;
-
-                BOM.setTimeout(function () {
-                    $_Input[0].focus();
+                })).change(function () {
+                    $_Input[0].value = Tips_Hide.call($_List)[0].value;
                 });
-            });
+            var $_Option = $_List.children();
+
+            $_Input.after($_List)
+                .dblclick($.proxy(Tips_Show, $_List))
+                .blur($.proxy(Tips_Hide, $_List))
+                .keyup(function () {
+                    var iValue = this.value;
+
+                    if (iValue === '')  return $_Option.appendTo($_List);
+
+                    $_Option.each(function () {
+                        for (var i = 0, j = 0;  i < iValue.length;  i++) {
+                            if (iValue[i + 1]  ===  undefined)  break;
+
+                            if (
+                                this.value.indexOf( iValue[i] )  <
+                                this.value.indexOf( iValue[i + 1] )
+                            ) {
+                                if (! this.parentElement)
+                                    $_List[0].appendChild( this );
+                                continue;
+                            }
+
+                            $(this).detach();
+                        }
+                    });
+                    Tips_Show.call($_List);
+                });
         });
     };
 
