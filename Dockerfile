@@ -5,8 +5,9 @@ MAINTAINER Tech_Query "shiy007@qq.com"
 
 RUN  apt-get install php5-sqlite;
 
-RUN  git clone https://git.oschina.net/Tech_Query/EasyWiki.git /app; \
-     chown -R -v www-data:www-data /app/;
+RUN  rm -rf /app; \
+     git clone https://git.oschina.net/Tech_Query/EasyWiki.git /app; \
+     chmod 777 /app/;
 
 EXPOSE 80 3306
 
