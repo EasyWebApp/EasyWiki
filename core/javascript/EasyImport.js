@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-04-26)  Stable
+//      [Version]    v1.0  (2016-04-28)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -78,6 +78,19 @@
                     return i;
 
             return -1;
+        };
+
+    if (! [ ].reduce)
+        Array.prototype.reduce = function () {
+            var iResult = arguments[1];
+
+            for (var i = 1;  i < this.length;  i++) {
+                if (i == 1)  iResult = this[0];
+
+                iResult = arguments[0](iResult, this[i], i, this);
+            }
+
+            return iResult;
         };
 
     /* ----- Date Extension ----- */
@@ -412,7 +425,7 @@
         };
 
     var Type_Info = {
-            Data:         _Object_.makeSet('String', 'Number', 'Boolean', 'Null'),
+            Data:         _Object_.makeSet('String', 'Number', 'Boolean'),
             BOM:          _Object_.makeSet('Window', 'DOMWindow', 'global'),
             DOM:          {
                 set:        _Object_.makeSet(
@@ -970,8 +983,8 @@
 
     _Object_.extend($, _Object_, _Time_, {
         browser:          _Browser_,
-        isData:           function () {
-            return  (this.type(arguments[0]) in Type_Info.Data);
+        isData:           function (iValue) {
+            return  Boolean(iValue)  ||  (this.type(iValue) in Type_Info.Data);
         },
         isSelector:       function () {
             try {
@@ -1042,12 +1055,9 @@
 
             if (! Args_Str)  return { };
 
-            var _Args_ = {
-                    toString:    function () {
-                        return  BOM.JSON.format(this);
-                    }
-                };
-            for (var i = 0, iValue; i < Args_Str.length; i++) {
+            var _Args_ = { };
+
+            for (var i = 0, iValue;  i < Args_Str.length;  i++) {
                 Args_Str[i] = $.split(Args_Str[i], '=', 2);
 
                 iValue = BOM.decodeURIComponent( Args_Str[i][1] );
@@ -1058,7 +1068,23 @@
                 _Args_[ Args_Str[i][0] ] = iValue;
             }
 
-            return  Args_Str.length ? _Args_ : { };
+            return _Args_;
+        },
+        paramSign:        function (iData) {
+            iData = (typeof iData == 'string')  ?  $.paramJSON(iData)  :  iData;
+
+            return $.map(
+                Object.getOwnPropertyNames(iData).sort(),
+                function (iKey) {
+                    switch (typeof iData[iKey]) {
+                        case 'function':    return;
+                        case 'object':      try {
+                            return  iKey + '=' + JSON.stringify(iData[iKey]);
+                        } catch (iError) { }
+                    }
+                    return  iKey + '=' + iData[iKey];
+                }
+            ).join(arguments[1] || '&');
         },
         fileName:         function () {
             return (
@@ -1634,6 +1660,29 @@
         }
     });
 
+/* ----- DOM Data Reduce  ----- */
+
+    var iOperator = {
+            '+':    function () {
+                return  arguments[0] + arguments[1];
+            },
+            '-':    function () {
+                return  arguments[0] - arguments[1];
+            }
+        };
+
+    $.fn.reduce = function (iMethod, iKey, iCallback) {
+        if (arguments.length < 3) {
+            iCallback = iKey;
+            iKey = undefined;
+        }
+        if (typeof iCallback == 'string')  iCallback = iOperator[iCallback];
+
+        return  $.map(this,  function () {
+            return  $( arguments[0] )[iMethod](iKey);
+        }).reduce(iCallback);
+    };
+
 /* ----- DOM UI Data Operator ----- */
 
     var RE_URL = /^(\w+:)?\/\/[\u0021-\u007e\uff61-\uffef]+$/;
@@ -1657,7 +1706,7 @@
             }
             case 'img':         return  $_This.attr('src', iValue);
             case 'textarea':    ;
-            case 'select':      ;
+            case 'option':      $_This.text(iValue);    break;
             case 'input':       {
                 var _Value_ = this.value;
                 try {
@@ -3354,21 +3403,18 @@
     function onLoad(iProperty, iData) {
         if (iProperty)  $.extend(this, iProperty);
 
-        if (
-            (! (this.option.crossDomain || (this.readyState == 4)))  ||
-            (typeof this.onready != 'function')
-        )
+        if (! (this.option.crossDomain || (this.readyState == 4)))
             return;
 
-        var iError = (this.status > 399);
+        var iError = (this.status > 399),  iArgs = [this, this.option];
 
-        $_DOM.trigger('ajaxComplete', [this]);
-        $_DOM.trigger('ajax' + (iError ? 'Error' : 'Success'),  [this]);
+        $_DOM.trigger('ajaxComplete', iArgs);
+        $_DOM.trigger('ajax' + (iError ? 'Error' : 'Success'),  iArgs);
+
+        if (typeof this.onready != 'function')  return;
 
         this.onready(
-            iData || this.responseAny(),
-            iError ? 'error' : 'success',
-            this
+            iData || this.responseAny(),  iError ? 'error' : 'success',  this
         );
     }
 
@@ -3412,7 +3458,7 @@
                 );
             },
             send:    function () {
-                $_DOM.trigger('ajaxSend', [this]);
+                $_DOM.trigger('ajaxSend',  [this, this.option]);
                 XHR_Send.call(this,  this.option.data = arguments[0]);
             }
         }, iMore);
@@ -3522,7 +3568,7 @@
             this.$_DOM = $_Form;
         },
         send:                function () {
-            $_DOM.trigger('ajaxSend', [this]);
+            $_DOM.trigger('ajaxSend',  [this, this.option]);
 
             if (this.option.type == 'POST')
                 this.$_DOM.submit();    //  <iframe />
@@ -3682,7 +3728,7 @@
 
             $_Form.data('_AJAX_Submitting_', 1);
 
-            var iMethod = (this.method || 'Get').toUpperCase();
+            var iMethod = ($_Form.attr('method') || 'Get').toUpperCase();
 
             if ((iMethod in HTTP_Method)  ||  (iMethod == 'GET'))
                 $[ iMethod.toLowerCase() ](

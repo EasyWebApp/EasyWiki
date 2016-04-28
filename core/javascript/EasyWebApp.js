@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.4  (2016-04-26)  Stable
+//      [Version]    v2.4  (2016-04-28)  Stable
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -89,14 +89,12 @@
             var iData = this.$_DOM.data('EWA_Model');
 
             if (! iData) {
-                iData = this.$_DOM.hasClass('ListView_Item') ?
-                    this.$_DOM : this.$_DOM.parents('.ListView_Item');
+                var $_Item = this.$_DOM.hasClass('ListView_Item') ?
+                        this.$_DOM : this.$_DOM.parents('.ListView_Item');
 
-                if ( iData[0] ) {
-                    iData = $.ListView.getInstance(iData[0].parentNode);
-
-                    iData = iData && iData.valueOf( this.$_DOM.index() );
-                }
+                if ( $_Item[0] )
+                    iData = $.ListView.getInstance( $_Item[0].parentNode )
+                        .valueOf( $_Item );
             }
             return  this.data = $.extend(iData || { },  this.data);
         },
@@ -124,15 +122,13 @@
             return this[iKey];
         },
         valueOf:      function () {
-            return {
-                target:    this.target,
-                title:     this.title,
-                alt:       this.alt,
-                href:      this.href,
-                method:    this.method,
-                src:       this.src,
-                action:    this.action
-            };
+            var iValue = { };
+
+            for (var iKey in this)
+                if (! (typeof this[iKey]).match(/object|function/))
+                    iValue[iKey] = this[iKey];
+
+            return iValue;
         }
     });
 
@@ -146,7 +142,7 @@
             URL:              iLink.alt || BOM.location.href,
             HTML:             iLink.href || DOM.URL,
             method:           iLink.method,
-            JSON:             iLink.src,
+            JSON:             iLink.src || iLink.action,
             time:             $.now(),
             innerLink:        [ ],
             innerTemplate:    [ ]
@@ -192,15 +188,7 @@
 
             return this;
         },
-        valueOf:    function () {
-            return {
-                title:     this.title,
-                URL:       this.URL,
-                HTML:      this.HTML,
-                method:    this.method,
-                JSON:      this.JSON
-            };
-        }
+        valueOf:    PageLink.prototype.valueOf
     });
 
 /* ---------- [object InnerHistory] ---------- */
@@ -227,6 +215,15 @@
             _This_.prevIndex = _This_.lastIndex;
             _This_.lastIndex = iState.DOM_Index;
         });
+    }
+
+    function Data_Merge(iOld, iNew) {
+        var iArgs = $.makeArray(arguments);
+        iArgs.unshift(true);
+
+        if (iArgs.slice(-1)[0] instanceof Array)  iArgs.splice(1, 0, [ ]);
+
+        return  $.extend.apply($, iArgs);
     }
 
     $.extend(InnerHistory.prototype, {
@@ -301,11 +298,13 @@
             return iSource;
         },
         getData:      function () {
-            var iData = $.map(this,  function () {
-                    return arguments[0].data;
+            var iData = $.map(this,  function (iPage) {
+                    var _Data_ = iPage.data || iPage.sourceLink.data;
+
+                    return  _Data_ && [_Data_];
                 });
             return  (iData.length < 2)  ?
-                (iData[0] || { })  :  $.extend.apply($, iData);
+                (iData[0] || { })  :  Data_Merge.apply(null, iData);
         },
     });
 
@@ -424,14 +423,6 @@
         return ($.inArray(
             'nofollow',  (this.getAttribute('rel') || '').split(/\s+/)
         ) > -1);
-    }
-
-    function Data_Merge(iOld, iNew) {
-        var iArgs = [true, iOld, iNew];
-
-        if (iNew instanceof Array)  iArgs.splice(1, 0, [ ]);
-
-        return  $.extend.apply($, iArgs);
     }
 
     $.extend(InnerPage.prototype, {
