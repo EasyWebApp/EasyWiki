@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-04-28)  Stable
+//      [Version]    v1.0  (2016-04-29)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -489,6 +489,10 @@
         return iType;
     };
 
+    _Object_.isData = function (iValue) {
+        return  Boolean(iValue)  ||  (this.type(iValue) in Type_Info.Data);
+    };
+
 /* ---------- DOM Info Operator - Get first, Set all. ---------- */
 
     var _DOM_ = {
@@ -583,7 +587,7 @@
 
             var iStyle = DOM.defaultView.getComputedStyle(iElement, null);
 
-            if (iName) {
+            if (iName && iStyle) {
                 iStyle = iStyle.getPropertyValue(iName);
 
                 if ((! iStyle)  &&  iName.match(this.PX_Needed))
@@ -593,7 +597,7 @@
                     iStyle = isNaN(iNumber) ? iStyle : iNumber;
                 }
             }
-            return iStyle;
+            return  _Object_.isData(iStyle) ? iStyle : '';
         },
         Set_Method:    _Browser_.modern ? 'setProperty' : 'setAttribute',
         set:           function (iElement, iName, iValue) {
@@ -983,9 +987,6 @@
 
     _Object_.extend($, _Object_, _Time_, {
         browser:          _Browser_,
-        isData:           function (iValue) {
-            return  Boolean(iValue)  ||  (this.type(iValue) in Type_Info.Data);
-        },
         isSelector:       function () {
             try {
                 DOM.querySelector(arguments[0])
@@ -1026,6 +1027,9 @@
             iXML.cookie;    //  for old WebKit core to throw Error
 
             return iXML;
+        },
+        globalEval:       function () {
+            this('<script />').prop('text', arguments[0]).appendTo('head');
         },
         param:            function (iObject) {
             var iParameter = [ ],  iValue;
@@ -1729,7 +1733,8 @@
                         $_This.html(iValue);
                     return;
                 }
-                iURL = $_This.css('background-image').match(/^url\(('|")?([^'"]+)('|")?\)/);
+                iURL = $_This.css('background-image')
+                    .match(/^url\(('|")?([^'"]+)('|")?\)/);
                 return  End_Element  ?  $_This.text()  :  (iURL && iURL[2]);
             }
         }

@@ -268,20 +268,32 @@
             iPosition = $_Input.attr('autocomplete', 'off').position();
             iPosition.top += $_Input.height();
 
-            var $_List = $(
-                    '#' + this.getAttribute('list') + ' > select[multiple]'
-                ).css($.extend(iPosition, {
-                    position:     'absolute',
-                    'z-index':    10000,
-                    height:       0,
-                    width:        $_Input.width(),
-                    padding:      0,
-                    border:       0,
-                    overflow:     'hidden',
-                    opacity:      0
-                })).change(function () {
-                    $_Input[0].value = Tips_Hide.call($_List)[0].value;
-                });
+        //  DOM Property Patch
+            $_Input[0].list = $('#' + this.getAttribute('list'))[0];
+
+            var $_List = $('select[multiple]', $_Input[0].list);
+
+            $_Input[0].list.options = $_List[0].children;
+
+        //  DropDown List
+            $_List.css($.extend(iPosition, {
+                position:     'absolute',
+                'z-index':    10000,
+                height:       0,
+                width:        $_Input.width(),
+                padding:      0,
+                border:       0,
+                overflow:     'hidden',
+                opacity:      0
+            })).change(function () {
+                $_Input[0].value = Tips_Hide.call($_List)[0].value;
+
+                return onChange.call(
+                    $_Input[0],
+                    arguments[0],
+                    this.children[this.selectIndex]
+                );
+            });
             $_List.$_Option = [ ];
 
             var iFilter = $.proxy(Tips_Match, null, $_List);

@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.4  (2016-04-28)  Stable
+//      [Version]    v2.5  (2016-04-29)  Alpha
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -360,7 +360,12 @@
                 this.app.domRoot  :  $('[name="' + this.target + '"]');
         },
         prefetch:     function () {
-            if ((this.target == '_self')  &&  this.href) {
+            var iHTML = (this.href || '').split('?');
+
+            if (
+                (this.target == '_self')  &&
+                ((iHTML[1] || '').indexOf('=') == -1)
+            ) {
                 var $_Prefetch = $('<link />', {
                         rel:     Prefetch_Tag,
                         href:    this.href
@@ -476,19 +481,26 @@
                     if (typeof iHTML != 'string')  return;
 
                     var not_Fragment = iHTML.match(/<\s*(html|head|body)(\s|>)/i),
-                        no_Link = (! iHTML.match(/<\s*link(\s|>)/i)),
+                        iSimple = (! iHTML.match(/<\s*(link|script)(\s|>)/i)),
                         iSelector = This_App.domRoot.selector;
 
-                    if ((! not_Fragment)  &&  no_Link)
+                    if ((! not_Fragment)  &&  iSimple)
                         return This_Page.show(iHTML).boot(Page_Load);
 
                     $_Body.sandBox(iHTML,  (
-                        ((iSelector && no_Link) ? iSelector : 'body > *')  +
-                            ', head link[target]'
+                        ((iSelector && iSimple) ? iSelector : 'body > *')  +
+                            ', head link[target], script'
                     ),  function ($_Content) {
-                        $_Content.filter('link').appendTo('head');
+                        $_Content = $_Content.not('script[src]');
 
-                        This_Page.show( $_Content.not('link') ).boot(Page_Load);
+                        $_Content.filter('link').appendTo('head');
+                        var $_Script = $_Content.filter('script');
+
+                        for (var i = 0;  i < $_Script.length;  i++)
+                            $.globalEval( $_Script[i].text );
+
+                        This_Page.show( $_Content.not('link, script') )
+                            .boot(Page_Load);
 
                         return false;
                     });
