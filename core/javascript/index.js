@@ -2,15 +2,17 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.9  (2016-04-20)  Beta
+//      [Version]    v0.9  (2016-05-05)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
-//                   iQuery+  v0.7+,
+//                   iQuery+  v1.4+,
+//
+//                   EasyWebUI.js  v2.5+,
 //
 //                   marked.js  v0.3+,
 //
-//                   EasyWebApp  v2.3+,
+//                   EasyWebApp  v2.5+,
 //
 //                   jQuery-QRcode  v0.12+,
 //
@@ -122,18 +124,17 @@
     });
 */
 
-    $_MainView.on('apiCall',  function () {
-        var iResponse = arguments[2];
-
+    $_MainView.WebApp().on('apiCall',  function (iResponse) {
         if (iResponse.URL.indexOf('core/api.php/online/') < 0)  return;
 
         switch (iResponse.method.toUpperCase()) {
             case 'DELETE':    return BOM.location.replace('.');
             case 'POST':      Auth_Control( iResponse.data.auth );
         }
-    }).on('pageRender',  function (iEvent, This_Page, Prev_Page, iData) {
+    }).on('pageRender',  function (This_Page, Prev_Page, iData) {
         var _TP_ = $.fileName(This_Page.HTML),
-            _PP_ = $.fileName(Prev_Page.HTML);
+            _PP_ = $.fileName(Prev_Page.HTML),
+            $_Form = $_MainView.find('form');
 
         if ((! $.isEmptyObject(iData))  &&  (iData.status === false))
             return BOM.alert(iData.msg);
@@ -149,11 +150,11 @@
                     }
                 });
                 break;
-            case 'signUp.html':    $('form', this).pwConfirm();    break;
+            case 'signUp.html':    $_Form.pwConfirm();    break;
             case 'spider.html':    {
                 var $_Auto_Fetch = $('#Auto_Fetch');
 
-                $('tbody tr', this).click(function () {
+                $_MainView.find('tbody tr').click(function () {
                     var $_Spider = $_MainView.find('form');
 
                     $_Spider.find('input[name="url"]')[0].value =
@@ -171,7 +172,7 @@
                 });
                 break;
             case 'auth.html':
-                $('form', this).submit(function () {
+                $_Form.submit(function () {
                     if (! arguments[0].isTrusted)  return;
 
                     $('tbody tr', this).each(function () {
@@ -190,7 +191,7 @@
 
         $_Body.removeClass('Not_Entry');
 
-        var iTitle = $('h1', this).text() || '';
+        var iTitle = $_MainView.find('h1').text() || '';
 
         DOM.title = iTitle + ' - EasyWiki';
 
@@ -203,37 +204,36 @@
             text:       BOM.location.href.split('#')[0] + '#!' + This_Page.HTML
         });
 
-        $('a[href]', this).attr('href',  function () {
+        $_MainView.find('a[href]').attr('href',  function () {
             if (! $.urlDomain(arguments[1])) {
                 this.setAttribute('rel', 'nofollow');
                 return  '#!data/' + arguments[1];
             }
             return arguments[1];
         });
-    }).on('pageReady',  function () {
+    }).on('pageReady',  function (This_Page, Prev_Page) {
 
-        var _TP_ = $.fileName( arguments[2].HTML ),
-            _PP_ = $.fileName( arguments[3].HTML ),
-            TP_Param = $.paramJSON( arguments[2].HTML );
+        var _TP_ = $.fileName( This_Page.HTML ),
+            _PP_ = $.fileName( Prev_Page.HTML ),
+            TP_Param = $.paramJSON( This_Page.HTML );
 
         switch (_TP_) {
             case 'editor.html':    if (_TP_ != _PP_) {
                 if (TP_Param.modify) {
-                    Load_Editor( arguments[3].HTML );
+                    Load_Editor( Prev_Page.HTML );
 
-                    $('form input[name="title"]', this).attr({
+                    $_MainNav.find('form input[name="title"]').attr({
                         readonly:    true,
                         title:       "已存在的词条不能改名"
                     })[0].value = _PP_.split('.')[0];
                 } else
                     Load_Editor();
 
-                $('form input[name="type"]', this)[0].value =
+                $_MainView.find('form input[name="type"]')[0].value =
                     TP_Param.category ? 1 : 0;
             }
         }
         $_MainView.trigger($_Body.hasClass('Not_Entry') ? 'Clear' : 'Refresh');
-
-    }).WebApp();
+    });
 
 })(self, self.document, self.iQuery);

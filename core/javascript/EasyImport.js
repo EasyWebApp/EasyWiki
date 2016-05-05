@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-04-29)  Stable
+//      [Version]    v1.0  (2016-05-05)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -866,13 +866,30 @@
             '(.*?)' + _Pseudo_ + "([>\\+~\\s]*.*)"
         );
 
+    function QuerySelector(iPath) {
+        var iRoot = this;
+
+        if ((this.nodeType != 9)  &&  this.parentNode) {
+            var _ID_ = this.getAttribute('id');
+
+            if (! _ID_) {
+                _ID_ = _Time_.uuid();
+                this.setAttribute('id', _ID_);
+            }
+            iPath = '#' + _ID_ + ' ' + iPath;
+            iRoot = this.parentNode;
+        }
+
+        return iRoot.querySelectorAll(iPath);
+    }
+
     function DOM_Search(iRoot, iSelector) {
         var _Self_ = arguments.callee;
 
         return  _Object_.map(iSelector.split(/\s*,\s*/),  function () {
             try {
                 return _Object_.makeArray(
-                    iRoot.querySelectorAll(arguments[0] || '*')
+                    QuerySelector.call(iRoot,  arguments[0] || '*')
                 );
             } catch (iError) {
                 var _Selector_;
@@ -886,7 +903,7 @@
                 _Selector_[1] += (_Selector_[1].match(/[\s>\+~]\s*$/) ? '*' : '');
 
                 return _Object_.map(
-                    iRoot.querySelectorAll(_Selector_[1]),
+                    QuerySelector.call(iRoot, _Selector_[1]),
                     function (iDOM) {
                         if ( iPseudo[_Pseudo_].filter(iDOM) )
                             return  _Selector_[2]  ?
@@ -1277,37 +1294,40 @@
         each:               function () {
             return  $.each(this, arguments[0]);
         },
-        is:                 function (iSelector) {
-            for (var i = 0;  i < this.length;  i++) {
-                if ($.type(this[i]) in Type_Info.DOM.root)  return false;
+        is:                 function ($_Match) {
+            var iPath = (typeof $_Match == 'string'),
+                iMatch = (typeof Element.prototype.matches == 'function');
 
-                if (! this[i].parentNode)  $('<div />')[0].appendChild(this[i]);
+            for (var i = 0, $_Is;  i < this.length;  i++) {
+                if (this[i] === $_Match)  return true;
 
-                try {
-                    return  this[i].matches(iSelector);
-                } catch (iError) {
-                    return (
-                        $(iSelector, this[i].parentNode).index(this[i])  >  -1
-                    );
-                }
+                if (iPath && iMatch)  try {
+                    return this[i].matches($_Match);
+                } catch (iError) { }
+
+                if (! this[i].parentNode)  $('<div />')[0].appendChild( this[i] );
+
+                $_Is = iPath  ?  $($_Match, this[i].parentNode)  :  $($_Match);
+
+                return  ($_Is.index( this[i] )  >  -1);
             }
+
             return false;
         },
-        filter:             function (iSelector) {
+        filter:             function () {
             var $_Result = [ ];
 
             for (var i = 0, j = 0;  i < this.length;  i++)
-                if ( $(this[i]).is(iSelector) )
+                if ($( this[i] ).is( arguments[0] ))
                     $_Result[j++] = this[i];
 
             return this.pushStack($_Result);
         },
         not:                function () {
-            var $_Not = $(arguments[0]),
-                $_Result = [ ];
+            var $_Result = [ ];
 
             for (var i = 0, j = 0;  i < this.length;  i++)
-                if ($.inArray(this[i], $_Not) < 0)
+                if (! $( this[i] ).is( arguments[0] ))
                     $_Result[j++] = this[i];
 
             return this.pushStack($_Result);
@@ -1695,7 +1715,7 @@
         var $_This = $(this),
             End_Element = (! this.children.length);
 
-        var _Set_ = iValue || $.isData(iValue),
+        var _Set_ = $.isData(iValue),
             iURL = (typeof iValue == 'string')  &&  iValue.trim();
         var isURL = iURL && iURL.split('#')[0].match(RE_URL);
 
@@ -1717,13 +1737,16 @@
                     _Value_ = JSON.parse(_Value_);
                 } catch (iError) { }
 
-                if (
-                    (this.type || '').match(/radio|checkbox/i)  &&
-                    (_Value_ == iValue)
-                )
-                    this.checked = true;
+                if ((this.type || '').match(/radio|checkbox/i)) {
+                    if (_Set_) {
+                        if (_Value_ === iValue)
+                            this.checked = true;
+                    } else
+                        return  this.checked && _Value_;
+                } else if (_Set_)
+                    this.value = iValue;
 
-                return $_This.val(iValue);
+                return _Value_;
             }
             default:            {
                 if (_Set_) {
@@ -3316,22 +3339,43 @@
 (function (BOM, DOM, $) {
 
     /* ----- XML HTTP Request ----- */
-    function X_Domain() {
-        var iDomain = $.urlDomain( arguments[0] );
 
-        return  iDomain && (
-            iDomain != [
-                BOM.location.protocol, '//', DOM.domain, (
-                    BOM.location.port  ?  (':' + BOM.location.port)  :  ''
-                )
-            ].join('')
+    function onLoad(iProperty, iData) {
+        if (iProperty)  $.extend(this, iProperty);
+
+        if (! (this.option.crossDomain || (this.readyState == 4)))
+            return;
+
+        var iError = (this.status > 399),  iArgs = [this, this.option];
+
+        $_DOM.trigger('ajaxComplete', iArgs);
+        $_DOM.trigger('ajax' + (iError ? 'Error' : 'Success'),  iArgs);
+
+        if (typeof this.onready != 'function')  return;
+
+        this.onready(
+            iData || this.responseAny(),  iError ? 'error' : 'success',  this
         );
     }
+
+    var Success_State = {
+            readyState:    4,
+            status:        200,
+            statusText:    'OK'
+        },
+        $_DOM = $(DOM);
 
     function XD_Request(iData) {
         var iOption = this.option;
 
         this.open.call(this, iOption.type, iOption.url, true);
+
+        this[this.option.crossDomain ? 'onload' : 'onreadystatechange'] = $.proxy(
+            onLoad,
+            this,
+            (! (this instanceof BOM.XMLHttpRequest))  &&  Success_State,
+            null
+        );
 
         if (iOption.xhrFields)  $.extend(this, iOption.xhrFields);
 
@@ -3344,15 +3388,20 @@
         for (var iKey in iOption.headers)
             this.setRequestHeader(iKey, iOption.headers[iKey]);
 
+        if ((iData instanceof Array)  ||  $.isPlainObject(iData))
+            iData = $.param(iData);
+
         if ((typeof iData == 'string')  ||  iOption.contentType)
             this.setRequestHeader('Content-Type', (
                 iOption.contentType || 'application/x-www-form-urlencoded'
             ));
 
-        this.send(
-            ((iData instanceof Array)  ||  $.isPlainObject(iData))  ?
-                $.param(iData) : iData
-        );
+        this.option.data = iData;
+
+        $_DOM.trigger('ajaxSend',  [this, this.option]);
+
+        this.send(iData);
+
         return this;
     }
 
@@ -3402,32 +3451,35 @@
             retry:          function () {
                 $.wait(arguments[0],  $.proxy(XD_Request, this));
             }
-        },
-        $_DOM = $(DOM);
+        }
 
-    function onLoad(iProperty, iData) {
-        if (iProperty)  $.extend(this, iProperty);
+    $.extend(BOM.XMLHttpRequest.prototype, XHR_Extension);
 
-        if (! (this.option.crossDomain || (this.readyState == 4)))
-            return;
+    if ($.browser.msie < 10)
+        $.extend(BOM.XDomainRequest.prototype, XHR_Extension, {
+            setRequestHeader:    function () {
+                console.warn("IE 8/9 XDR doesn't support Changing HTTP Headers...");
+            }
+        });
 
-        var iError = (this.status > 399),  iArgs = [this, this.option];
+    function X_Domain() {
+        var iDomain = $.urlDomain( arguments[0] );
 
-        $_DOM.trigger('ajaxComplete', iArgs);
-        $_DOM.trigger('ajax' + (iError ? 'Error' : 'Success'),  iArgs);
-
-        if (typeof this.onready != 'function')  return;
-
-        this.onready(
-            iData || this.responseAny(),  iError ? 'error' : 'success',  this
+        return  iDomain && (
+            iDomain != [
+                BOM.location.protocol, '//', DOM.domain, (
+                    BOM.location.port  ?  (':' + BOM.location.port)  :  ''
+                )
+            ].join('')
         );
     }
 
-    var Success_State = {
-            readyState:    4,
-            status:        200,
-            statusText:    'OK'
-        };
+    $.ajaxPrefilter = function (iFilter) {
+        if (typeof iFilter == 'function')
+            $_DOM.on('ajaxPrefilter',  function (iEvent, iXHR) {
+                iFilter(iXHR.option, iXHR.option, iXHR);
+            });
+    };
 
     function beforeOpen(iMethod, iURL, iData) {
         this.option = {
@@ -3438,45 +3490,6 @@
         };
         $_DOM.triggerHandler('ajaxPrefilter', [this]);
     }
-
-    $.ajaxPrefilter = function (iFilter) {
-        if (typeof iFilter == 'function')
-            $_DOM.on('ajaxPrefilter',  function (iEvent, iXHR) {
-                iFilter(iXHR.option, iXHR.option, iXHR);
-            });
-    };
-
-    function XHR_Extend(XHR_Proto, iMore) {
-        var XHR_Open = XHR_Proto.open,  XHR_Send = XHR_Proto.send;
-
-        $.extend(XHR_Proto, XHR_Extension, {
-            open:           function () {
-                XHR_Open.apply(this, arguments);
-
-                this[
-                    this.option.crossDomain ? 'onload' : 'onreadystatechange'
-                ] = $.proxy(
-                    onLoad,
-                    this,
-                    (! (this instanceof XMLHttpRequest))  &&  Success_State,
-                    null
-                );
-            },
-            send:    function () {
-                $_DOM.trigger('ajaxSend',  [this, this.option]);
-                XHR_Send.call(this,  this.option.data = arguments[0]);
-            }
-        }, iMore);
-    }
-
-    XHR_Extend(BOM.XMLHttpRequest.prototype);
-
-    if ($.browser.msie < 10)
-        XHR_Extend(BOM.XDomainRequest.prototype, {
-            setRequestHeader:    function () {
-                console.warn("IE 8/9 XDR doesn't support Changing HTTP Headers...");
-            }
-        });
 
     /* ----- HTML DOM SandBox ----- */
     $.fn.sandBox = function () {
@@ -3497,7 +3510,7 @@
                 if (! (_DOM_.body && _DOM_.body.childNodes.length))
                     return;
 
-                var $_Content = $(iSelector || 'body > *',  _DOM_).not('script');
+                var $_Content = $(iSelector || 'body > *',  _DOM_);
 
                 if (iCallback  &&  (false === iCallback.call(
                     $_iFrame[0],  $($.merge(

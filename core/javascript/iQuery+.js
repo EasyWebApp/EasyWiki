@@ -2,7 +2,7 @@
 //              >>>  iQuery+  <<<
 //
 //
-//    [Version]    v1.4  (2016-04-29)  Stable
+//    [Version]    v1.4  (2016-05-05)  Stable
 //
 //    [Require]    iQuery  ||  jQuery with jQuery+
 //
@@ -58,13 +58,26 @@
     $.extend(EventInterface.prototype, {
         on:         function (iType, iCallback) {
             if (
-                (typeof iType == 'string')  &&
                 (typeof iCallback == 'function')  &&
                 (this.callback[iType].indexOf(iCallback) == -1)
             )
                 this.callback[iType].push(iCallback);
 
             return this;
+        },
+        off:        function (iType, iCallback) {
+            var Index = this.callback[iType].indexOf(iCallback);
+
+            if (Index > -1)  this.callback[iType].splice(Index, 1);
+
+            return this;
+        },
+        one:        function (iType, iCallback) {
+            return  this.on(iType,  function () {
+                this.off(iType, arguments.callee);
+
+                return  iCallback.apply(this, arguments);
+            });
         },
         trigger:    function () {
             var iCallback = this.callback[ arguments[0] ],  iReturn;
@@ -78,6 +91,8 @@
             return iReturn;
         }
     });
+
+    $.EventInterface = EventInterface;
 
 /* ---------- ListView Interface  v0.7 ---------- */
 
@@ -338,7 +353,7 @@
         iKey = iKey || 'list';
 
         this.unit = iListView.on('insert',  function ($_Item, iValue) {
-            if ( iValue[iKey] )
+            if ($.likeArray( iValue[iKey] )  &&  iValue[iKey][0])
                 iTree.branch(this, $_Item, iValue[iKey]);
         });
     }

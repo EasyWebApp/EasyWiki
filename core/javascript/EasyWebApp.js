@@ -2,7 +2,7 @@
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v2.5  (2016-04-29)  Alpha
+//      [Version]    v2.5  (2016-05-05)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -16,6 +16,71 @@
 //
 //              (C)2015-2016    shiy2008@gmail.com
 //
+
+
+/* ---------- Abstract View Data I/O ---------- */
+
+(function ($) {
+
+    function ArrayRender(iArray, ValueRender) {
+        $.ListView(this,  function () {
+            ValueRender.call(arguments[0], arguments[1]);
+        }).clear().render( iArray );
+    }
+
+    function ObjectRender(iData) {
+        var _Self_ = arguments.callee;
+
+        if (iData instanceof Array)
+            return  ArrayRender.call(this[0], iData, _Self_);
+
+        this.value('name',  function (iName) {
+
+            if (iData[iName] instanceof Array)
+                ArrayRender.call(this, iData[iName], _Self_);
+            else
+                return iData[iName];
+        });
+    }
+
+    $.fn.extend({
+        dataRender:    function (iData) {
+            if (iData instanceof Array)
+                ArrayRender.call(
+                    $.ListView.findView(this, true)[0],  iData,  ObjectRender
+                );
+            else
+                ObjectRender.call(this, iData);
+
+            return this;
+        },
+        dataReader:    function () {
+            var $_Key = $('[name]', this[0]).not( $('[name] [name]', this[0]) ),
+                iData = { };
+
+            if (! $_Key[0])  return this.value();
+
+            for (var i = 0, iName, iLV;  i < $_Key.length;  i++) {
+                iName = $_Key[i].getAttribute('name');
+                iLV = $.ListView.getInstance( $_Key[i] );
+
+                if (! iLV)
+                    iData[iName] = arguments.callee.call( $( $_Key[i] ) );
+                else {
+                    iData[iName] = [ ];
+
+                    for (var j = 0;  j < iLV.length;  j++)
+                        iData[iName][j] = $.extend(
+                            iLV.valueOf(j),  arguments.callee.call( iLV[j] )
+                        );
+                }
+            }
+            return iData;
+        }
+    });
+
+})(self.jQuery);
+
 
 
 (function (BOM, DOM, $) {
@@ -310,7 +375,13 @@
 
 /* ---------->> WebApp Constructor <<---------- */
 
+    var Event_Type = [
+            'pageLoad', 'formSubmit', 'apiCall', 'pageRender', 'pageReady', 'appExit'
+        ];
+
     function WebApp($_Root, API_Root, URL_Change) {
+        $.EventInterface.apply(this, Event_Type);
+
         $.extend(this, {
             domRoot:      $($_Root),
             apiRoot:      API_Root || '',
@@ -319,6 +390,9 @@
             loading:      false
         });
     }
+
+    WebApp.prototype = new $.EventInterface();
+    WebApp.prototype.constructor = WebApp;
 
     var RE_Str_Var = /\{(.+?)\}/g;
 
@@ -396,15 +470,16 @@
                 API_URL = this.getURL('src');
 
             function AJAX_Ready(iData) {
-                iData = This_App.domRoot.triggerHandler('apiCall', [
-                    This_App,
+                iData = This_App.trigger(
+                    'apiCall',
                     {
                         method:    iLink.method,
                         URL:       API_URL || iLink.getURL('action'),
                         data:      iData
                     },
-                    This_App.history.last().HTML
-                ]) || iData;
+                    This_App.history.last().HTML,
+                    This_App
+                ) || iData;
 
                 if (typeof Data_Ready == 'function')
                     Data_Ready.call(iLink, iData);
@@ -437,8 +512,8 @@
                 $_API = $('head link[src]');
 
             if ( $_Page.length )
-                this.ownerApp.domRoot.one('pageReady',  function () {
-                    return  arguments[1].loadLink(
+                this.ownerApp.one('pageReady',  function () {
+                    return  arguments[2].loadLink(
                         $_Page.remove().attr(['target', 'href']),
                         null,
                         This_Page.sourceLink.getData()
@@ -531,10 +606,11 @@
 
     $.extend(PageLink.prototype, {
         loadTemplate:    function () {
-            var iReturn = this.app.domRoot.triggerHandler('pageLoad', [
+            var iReturn = this.app.trigger(
+                    'pageLoad',
                     this.app.history.last(),
                     this.app.history.prev()
-                ]);
+                );
             if (iReturn === false)  return;
 
             this.app.loading = true;
@@ -564,9 +640,12 @@
             if (Need_HTML)  This_Page.load(this, Page_Load);
         },
         loadPage:        function () {
-            var iReturn = this.app.domRoot.triggerHandler('appExit', [
-                    this.app.history.last().HTML,  this.href,  this.getData()
-                ]);
+            var iReturn = this.app.trigger(
+                    'appExit',
+                    this.app.history.last().HTML,
+                    this.href,
+                    this.getData()
+                );
             if (iReturn === false)  return;
 
             this.app.history.move();
@@ -577,55 +656,30 @@
         }
     });
 
-    function ArrayRender(iArray, ValueRender) {
-        $.ListView(this,  function () {
-            ValueRender.call(arguments[0], arguments[1]);
-        }).clear().render( iArray );
-    }
-
-    function ObjectRender(iData) {
-        var _Self_ = arguments.callee;
-
-        if (iData instanceof Array)
-            return  ArrayRender.call(this[0], iData, _Self_);
-
-        this.value('name',  function (iName) {
-            if (iData[iName] instanceof Array)
-                ArrayRender.call(this, iData[iName], _Self_);
-            else
-                return iData[iName];
-        });
-    }
-
     $.extend(InnerPage.prototype,{
         render:      function (Source_Link, iData) {
             var This_App = this.ownerApp;
 
-            /* ----- Data Stack Change ----- */
             iData = Data_Merge(Source_Link && Source_Link.getData(),  iData);
 
-            var iReturn = This_App.domRoot.triggerHandler('pageRender', [
+            var iReturn = This_App.trigger(
+                    'pageRender',
                     This_App.history.last(),
                     This_App.history.prev(),
                     iData
-                ]);
+                );
             this.data = iData = iReturn || iData;
 
-            if (iReturn === false)  return this;
+            if (iReturn !== false) {
+                var $_Render = This_App.domRoot;
 
-            /* ----- View Init ----- */
-            var $_List = This_App.domRoot;
+                if (! (iData instanceof Array))
+                    $_Render = $_Body;
+                else if (Source_Link  &&  (Source_Link.target != '_self'))
+                    $_Render = Source_Link.getTarget().parent();
 
-            if (Source_Link  &&  (Source_Link.target != '_self'))
-                $_List = Source_Link.getTarget().parent();
-            $_List = $.ListView.findView($_List, true);
-
-
-            /* ----- Data Render ----- */
-            if (iData instanceof Array)
-                ArrayRender.call($_List[0], iData, ObjectRender);
-            else
-                ObjectRender.call($_Body, iData);
+                $_Render.dataRender(iData);
+            }
 
             return this;
         },
@@ -652,11 +706,13 @@
 
             This_App.loading = false;
 
-            This_App.domRoot.trigger('pageReady', [
-                This_App,
+            This_App.trigger(
+                'pageReady',
                 This_App.history.last(),
-                This_App.history.prev()
-            ]).focus();
+                This_App.history.prev(),
+                This_App
+            );
+            This_App.domRoot.focus();
 
             $_Body.trigger({
                 type:      'loading',
@@ -778,12 +834,13 @@
             );
         }).ajaxSubmit(function (iData) {
 
-            var iReturn = This_App.domRoot.triggerHandler('formSubmit', [
+            var iReturn = This_App.trigger(
+                    'formSubmit',
                     This_App.history.last().HTML,
                     arguments[2].url,
                     iData,
                     $(this).attr('href')
-                ]);
+                );
 
             if ((iReturn !== false)  &&  this.target)
                 This_App.loadLink(
@@ -808,6 +865,12 @@
 /* ---------->> jQuery Wrapper <<---------- */
 
     $.fn.WebApp = function () {
+        if (! this[0])  return;
+
+        var iWebApp = $(this[0]).data('_EWAI_');
+
+        if (iWebApp instanceof WebApp)  return iWebApp;
+
         var iArgs = $.makeArray(arguments);
 
         var Init_Data = $.extend(
@@ -818,59 +881,45 @@
         var API_Root = (typeof iArgs[0] == 'string') && iArgs.shift();
         var URL_Change = (typeof iArgs[0] == 'boolean') && iArgs[0];
 
-        (new WebApp(this, API_Root, URL_Change)).boot(Init_Data);
+        iWebApp = (new WebApp(this, API_Root, URL_Change)).boot(Init_Data);
 
-        return this.addClass('EWA_Container');
+        $(this[0]).data('_EWAI_', iWebApp).addClass('EWA_Container');
+
+        return iWebApp;
     };
 
-    function RouterBack(iHTML, iJSON) {
-        var Page_Match = (iHTML && iJSON)  ?  2  :  1,
-            iArgs = $.makeArray( arguments ).slice(4);
+    $.fn.extend($.map(
+        $.makeSet.apply($,  $.map(Event_Type,  function () {
+            return  ('on-' + arguments[0]).toCamelCase();
+        })),
+        function (iValue, iType) {
+            return  function () {
+                var iArgs = $.makeArray(arguments);
 
-        var iApp = (iArgs[0] instanceof WebApp)  &&  iArgs.shift();
-        var This_Page = iArgs[0],  iData = iArgs[2];
+                var iHTML = $.type(iArgs[0]).match(/String|RegExp/i) && iArgs.shift();
+                var iJSON = $.type(iArgs[0]).match(/String|RegExp/i) && iArgs.shift();
+                var iCallback = (typeof iArgs[0] == 'function')  &&  iArgs[0];
 
-        if (This_Page.HTML && This_Page.HTML.match(iHTML))
-            Page_Match-- ;
-        if (This_Page.JSON && This_Page.JSON.match(iJSON))
-            Page_Match-- ;
+                if ((iHTML || iJSON)  &&  iCallback)
+                    this.WebApp().on(iType,  function (This_Page) {
+                        var Page_Match = (iHTML && iJSON)  ?  2  :  1;
 
-        if (Page_Match === 0)
-            iData = arguments[2].apply(this,  iApp ? [
-                iApp, This_Page, iArgs[1], iData
-            ] : [
-                iData, This_Page, iArgs[1]
-            ]) || iData;
+                        if (iHTML  &&  (This_Page.HTML || '').match(iHTML))
+                            Page_Match-- ;
+                        if (iJSON  &&  (This_Page.JSON || '').match(iJSON))
+                            Page_Match-- ;
 
-        return iData;
-    }
+                        if (! Page_Match) {
+                            var iArgs = $.makeArray( arguments );
+                            iArgs.unshift( iArgs.pop() );
 
-    $.fn.onPageRender = function () {
-        var iArgs = $.makeArray(arguments);
+                            return  iCallback.apply(this, iArgs);
+                        }
+                    });
 
-        var iHTML = $.type(iArgs[0]).match(/String|RegExp/i) && iArgs.shift();
-        var iJSON = $.type(iArgs[0]).match(/String|RegExp/i) && iArgs.shift();
-
-        if ((iHTML || iJSON)  &&  (typeof iArgs[0] == 'function'))
-            this.on('pageRender', $.proxy(
-                RouterBack,  null,  iHTML,  iJSON,  iArgs[0]
-            ));
-
-        return this;
-    };
-
-    $.fn.onPageReady = function () {
-        var iArgs = $.makeArray(arguments);
-
-        var iHTML = $.type(iArgs[0]).match(/String|RegExp/i) && iArgs.shift();
-        var iJSON = $.type(iArgs[0]).match(/String|RegExp/i) && iArgs.shift();
-
-        if ((iHTML || iJSON)  &&  (typeof iArgs[0] == 'function'))
-            this.on('pageReady', $.proxy(
-                RouterBack,  null,  iHTML,  iJSON,  iArgs[0]
-            ));
-
-        return this;
-    };
+                return this;
+            };
+        }
+    ));
 
 })(self, self.document, self.jQuery);
