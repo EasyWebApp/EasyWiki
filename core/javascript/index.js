@@ -2,13 +2,13 @@
 //                >>>  EasyWiki  <<<
 //
 //
-//      [Version]    v0.9  (2016-05-05)  Beta
+//      [Version]    v0.9  (2016-05-06)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
 //                   iQuery+  v1.4+,
 //
-//                   EasyWebUI.js  v2.5+,
+//                   EasyWebUI.js  v2.6+,
 //
 //                   marked.js  v0.3+,
 //
@@ -234,6 +234,8 @@
             }
         }
         $_MainView.trigger($_Body.hasClass('Not_Entry') ? 'Clear' : 'Refresh');
+
+        $('table', this.domRoot[0]).iTable();
     });
 
 })(self, self.document, self.iQuery);
