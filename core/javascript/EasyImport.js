@@ -2,7 +2,7 @@
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-05-05)  Stable
+//      [Version]    v1.0  (2016-05-07)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -590,9 +590,10 @@
             if (iName && iStyle) {
                 iStyle = iStyle.getPropertyValue(iName);
 
-                if ((! iStyle)  &&  iName.match(this.PX_Needed))
-                    iStyle = 0;
-                else if (iStyle.indexOf(' ') == -1) {
+                if (! iStyle) {
+                    if (iName.match( this.PX_Needed ))
+                        iStyle = 0;
+                } else if (iStyle.indexOf(' ') == -1) {
                     var iNumber = parseFloat(iStyle);
                     iStyle = isNaN(iNumber) ? iStyle : iNumber;
                 }
@@ -1733,13 +1734,16 @@
             case 'option':      $_This.text(iValue);    break;
             case 'input':       {
                 var _Value_ = this.value;
-                if (this.type != 'tel')  try {
+
+                if (this.getAttribute('type') != 'tel')  try {
                     _Value_ = JSON.parse(_Value_);
                 } catch (iError) { }
 
                 if ((this.type || '').match(/radio|checkbox/i)) {
                     if (_Set_) {
-                        if (_Value_ === iValue)
+                        if ((! _Value_)  ||  (_Value_ == 'on'))
+                            this.value = iValue;
+                        else if (_Value_ === iValue)
                             this.checked = true;
                     } else
                         return  this.checked && _Value_;
@@ -1930,12 +1934,14 @@
             }));
         }
         return  this.each(function () {
-            var _Rule_ = { };
+            var _Rule_ = { },  _ID_ = this.getAttribute('id');
 
-            this.id = this.id || $.uuid();
-
+            if (! _ID_) {
+                _ID_ = $.uuid();
+                this.setAttribute('id', _ID_);
+            }
             for (var iSelector in iRule)
-                _Rule_['#' + this.id + iSelector] = iRule[iSelector];
+                _Rule_['#' + _ID_ + iSelector] = iRule[iSelector];
 
             var iSheet = $.cssRule(_Rule_);
 
@@ -3451,7 +3457,7 @@
             retry:          function () {
                 $.wait(arguments[0],  $.proxy(XD_Request, this));
             }
-        }
+        };
 
     $.extend(BOM.XMLHttpRequest.prototype, XHR_Extension);
 
@@ -3514,9 +3520,7 @@
 
                 if (iCallback  &&  (false === iCallback.call(
                     $_iFrame[0],  $($.merge(
-                        $.makeArray($(
-                            'head style, head link[rel="stylesheet"]',  _DOM_
-                        )),
+                        $.makeArray($('head style, head script',  _DOM_)),
                         $_Content[0] ? $_Content : _DOM_.body.childNodes
                     ))
                 )))
@@ -3692,23 +3696,32 @@
 
     /* ----- Smart HTML Loading ----- */
     $.fn.load = function (iURL, iData, iCallback) {
-        if (! this.length)  return this;
+        if (! this[0])  return this;
 
         var $_This = this;
 
         iURL = $.split(iURL.trim(), /\s+/, 2, ' ');
+
         if (typeof iData == 'function') {
             iCallback = iData;
             iData = null;
         }
+
         function Append_Back() {
             $_This.children().fadeOut();
-            $(arguments[0]).appendTo( $_This.empty() ).fadeIn();
+
+            var $_Content = $(arguments[0]).appendTo( $_This.empty() ).fadeIn();
+
+            var $_Script = $_Content.filter('script').not('[src]');
+
+            for (var i = 0;  i < $_Script.length;  i++)
+                $.globalEval( $_Script[i].text );
 
             if (typeof iCallback == 'function')
                 for (var i = 0;  i < $_This.length;  i++)
                     iCallback.apply($_This[i], arguments);
         }
+
         function Load_Back(iHTML) {
             if (typeof iHTML != 'string')  return;
 
@@ -3720,11 +3733,11 @@
             var _Context_ = [this, $.makeArray(arguments)];
 
             $(DOM.body).sandBox(iHTML,  iURL[1],  function ($_innerDOM) {
-                _Context_[1].splice(0, 1, $_innerDOM);
+                _Context_[1][0] = $_innerDOM;
 
                 Append_Back.apply(_Context_[0], _Context_[1]);
 
-                $(this).remove();
+                return false;
             });
         }
 
