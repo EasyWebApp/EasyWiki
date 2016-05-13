@@ -222,7 +222,7 @@
                 if (TP_Param.modify) {
                     Load_Editor( Prev_Page.HTML );
 
-                    $_MainNav.find('form input[name="title"]').attr({
+                    $_MainView.find('form input[name="title"]').attr({
                         readonly:    true,
                         title:       "已存在的词条不能改名"
                     })[0].value = _PP_.split('.')[0];
