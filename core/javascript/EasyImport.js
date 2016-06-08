@@ -91,9 +91,7 @@ define('iQuery',  function () {
     /* ----- Date Extension ----- */
 
     if (! Date.now)
-        Date.now = function () {
-            return  (new Date()).getTime();
-        };
+        Date.now = function () { return  +(new Date()); };
 
     /* ----- JSON Extension  v0.4 ----- */
 
@@ -204,8 +202,8 @@ define('iQuery',  function () {
         }
 
         for (var i = 0;  i < iArgs.length;  i++)
-            iSet[ iArgs[i] ] = (typeof iValue == 'function')  ?
-                iValue() : iValue;
+            iSet[ iArgs[i] ] = (typeof iValue != 'function')  ?
+                iValue  :  iValue( iArgs[i] );
 
         return iSet;
     };
@@ -683,7 +681,7 @@ define('iQuery',  function () {
         now:        Date.now,
         every:      function (iSecond, iCallback) {
             var _BOM_ = this._Root_,
-                iTimeOut = (iSecond || 1) * 1000,
+                iTimeOut = (iSecond || 0.01) * 1000,
                 iStart = this.now(),
                 Index = 0;
 
@@ -2705,8 +2703,47 @@ define('iQuery',  function () {
 
 (function (BOM, DOM, $) {
 
-    if (! ($.browser.msie < 11))  return;
+/* ---------- Document Current Script ---------- */
 
+    var Stack_Prefix = {
+            webkit:     'at ',
+            mozilla:    '@',
+            msie:       'at Global code \\('
+        };
+
+    function Script_URL() {
+        try {
+            throw  new Error('AMD_Loader');
+        } catch (iError) {
+            var iURL;
+
+            for (var iCore in Stack_Prefix)
+                if ( $.browser[iCore] ) {
+                    iURL = iError.stack.match(RegExp(
+                        "\\s+" + Stack_Prefix[iCore] + "(http(s)?:\\/\\/\\S+.js)"
+                    ));
+
+                    return  iURL && iURL[1];
+                }
+        }
+    }
+
+    if (! ('currentScript' in DOM))
+        Object.defineProperty(DOM.constructor.prototype, 'currentScript', {
+            get:    function () {
+                var iURL = ($.browser.msie < 10)  ||  Script_URL();
+
+                for (var i = 0;  DOM.scripts[i];  i++)
+                    if ((iURL === true)  ?
+                        (DOM.scripts[i].readyState == 'interactive')  :
+                        (DOM.scripts[i].src == iURL)
+                    )
+                        return DOM.scripts[i];
+            }
+        });
+
+
+    if (! ($.browser.msie < 11))  return;
 
 /* ---------- Element Data Set ---------- */
 
@@ -3830,6 +3867,8 @@ define('iQuery',  function () {
         };
     });
 
+    var ResponseType = $.makeSet('html', 'xml', 'json');
+
     function AJAX_Complete(iOption) {
         var iHeader = { };
 
@@ -3840,13 +3879,14 @@ define('iQuery',  function () {
                 iHeader[_Header_[0]] = _Header_[1];
             });
 
+        var iType = (iHeader['Content-Type'] || '').split(';')[0].split('/');
+
         $.extend(this, {
             status:          arguments[1],
             statusText:      arguments[2],
             responseText:    arguments[3].text,
-            responseType:    (
-                (iHeader['Content-Type'] || '').split(';')[0].split('/')[1]
-            )  ||  'text'
+            responseType:
+                ((iType[1] in ResponseType) ? iType[1] : iType[0])  ||  'text'
         });
 
         switch ( this.responseType ) {
@@ -4293,7 +4333,7 @@ define('iQuery',  function () {
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-06-01)  Stable
+//      [Version]    v1.0  (2016-06-06)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
@@ -4320,7 +4360,7 @@ define('iQuery',  function () {
 //                >>>  EasyImport.js  <<<
 //
 //
-//      [Version]    v1.2  (2016-05-16)  Stable
+//      [Version]    v1.2  (2016-06-06)  Stable
 //
 //      [Usage]      A Asynchronous & Responsive Loader
 //                   for Resource File in Web Browser.
@@ -4385,14 +4425,7 @@ define('iQuery',  function () {
 
 /* ---------- Loading Queue ---------- */
 
-    var Root_Path = (function ($_Script) {
-            for (var i = 0, iPath;  i < $_Script.length;  i++) {
-                iPath = $_Script[i].src.match(
-                    /(.+)[^\/]*EasyImport[^\/]*\.js[^\/]*$/i
-                );
-                if (iPath)  return iPath[1];
-            }
-        })( $('head > script') );
+    var Root_Path = $.filePath( DOM.currentScript.src )  +  '/';
 
     function Queue_Filter(iList) {
         for (var i = 0, _Group_;  i < iList.length;  i++) {
