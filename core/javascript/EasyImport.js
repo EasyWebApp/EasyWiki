@@ -8,7 +8,7 @@ define('iQuery',  function () {
     var iQuery = {fn:  { }};
 
 
-(function (BOM) {
+(function (BOM, DOM) {
 
     /* ----- Object Patch ----- */
 
@@ -88,6 +88,19 @@ define('iQuery',  function () {
             return iResult;
         };
 
+    /* ----- Function Extension ----- */
+
+    function FuncName() {
+        return  (this.toString().trim().match(/^function\s+([^\(\s]*)/) || '')[1];
+    }
+
+    if (! ('name' in Function.prototype)) {
+        if (DOM.documentMode > 8)
+            Object.defineProperty(Function.prototype,  'name',  {get: FuncName});
+        else
+            Function.prototype.name = FuncName;
+    }
+
     /* ----- Date Extension ----- */
 
     if (! Date.now)
@@ -133,7 +146,7 @@ define('iQuery',  function () {
     for (var i = 0;  i < Console_Method.length;  i++)
         BOM.console[ Console_Method[i] ] = _Notice_;
 
-})(self);
+})(self,  self.document);
 
 
 
@@ -223,12 +236,12 @@ define('iQuery',  function () {
         iDepth = iDepth || 1;
 
         if (!  (iLeft && iRight))
-            return  (iLeft == iRight);
+            return  (iLeft === iRight);
 
         iLeft = iLeft.valueOf();  iRight = iRight.valueOf();
 
         if ((typeof iLeft != 'object')  ||  (typeof iRight != 'object'))
-            return  (iLeft == iRight);
+            return  (iLeft === iRight);
 
         var Left_Key = Object.getOwnPropertyNames(iLeft),
             Right_Key = Object.getOwnPropertyNames(iRight);
@@ -243,7 +256,7 @@ define('iQuery',  function () {
             if (_Key_ != Right_Key[i])  return false;
 
             if (! iDepth) {
-                if (iLeft[_Key_] != iRight[_Key_])  return false;
+                if (iLeft[_Key_] !== iRight[_Key_])  return false;
             } else {
                 if (! arguments.callee.call(
                     this, iLeft[_Key_], iRight[_Key_], iDepth
@@ -349,6 +362,9 @@ define('iQuery',  function () {
                 Object.prototype.toString.call(iValue)
                     .split(' ')[1].slice(0, -1).toLowerCase();
         },
+        isNumeric:        function () {
+            return  (! isNaN(Number( arguments[0] )));
+        },
         isEmptyObject:    function () {
             for (var iKey in arguments[0])
                 return false;
@@ -411,15 +427,12 @@ define('iQuery',  function () {
                 iSource = this.makeArray(iSource);
 
             for (var i = 1;  i < arguments.length;  i++)
-                iSource = Array.prototype.concat.apply(
-                    iSource,
-                    this.likeArray( arguments[i] )  ?
-                        (
-                            $.browser.modern ?
-                                arguments[i] : this.makeArray(arguments[i])
-                        )  :
-                        [arguments[i]]
-                );
+                Array.prototype.splice.apply(iSource, Array.prototype.concat.apply(
+                    [iSource.length, 0],
+                    ($.likeArray( arguments[i] )  &&  (! $.browser.modern))  ?
+                        $.makeArray( arguments[i] )  :  arguments[i]
+                ));
+
             return iSource;
         },
         unique:           function (iArray) {
@@ -509,7 +522,7 @@ define('iQuery',  function () {
 
         return  ProxyCache.wrapper[Index] = function () {
             return  iFunction.apply(
-                iContext || this,  $.merge(iArgs, arguments)
+                iContext || this,  $.merge([ ], iArgs, arguments)
             );
         };
     };
@@ -529,8 +542,12 @@ define('iQuery',  function () {
             try {
                 iType = $.type( iVar );
 
-                if ((iType == 'object')  &&  iVar.constructor.name)
-                    iType = iVar.constructor.name;
+                var iName = iVar.constructor.name;
+                iName = (typeof iName == 'function')  ?
+                    iName.call( iVar.constructor )  :  iName;
+
+                if ((iType == 'object')  &&  iName)
+                    iType = iName;
                 else
                     iType = iType[0].toUpperCase() + iType.slice(1);
             } catch (iError) {
@@ -609,7 +626,7 @@ define('iQuery',  function () {
                 iValue = BOM.decodeURIComponent( Args_Str[i][1] );
 
                 if (
-                    isNaN(Number( iValue ))  ||
+                    (! $.isNumeric(iValue))  ||
                     (parseInt(iValue).toString().length < 21)
                 )  try {
                     iValue = $.parseJSON(iValue);
@@ -727,7 +744,7 @@ define('iQuery',  function () {
                 element:    $.makeSet('Window', 'Document', 'HTMLElement'),
                 root:       $.makeSet('Document', 'Window')
             },
-            Get_Name_Type:    $.makeSet('String', 'Array', 'Undefined'),
+            Get_Name_Type:    $.makeSet('string', 'array', 'undefined'),
             operate:          function (iType, iElement, iName, iValue) {
                 if (iValue === null) {
                     if (this[iType].clear)
@@ -737,7 +754,7 @@ define('iQuery',  function () {
                 }
                 if (
                     (iValue === undefined)  &&
-                    ($.Type(iName) in this.Get_Name_Type)
+                    ($.type(iName) in this.Get_Name_Type)
                 ) {
                     if (! iElement.length)  return;
 
@@ -749,27 +766,25 @@ define('iQuery',  function () {
                     }
                     return  this[iType].get(iElement[0], iName);
                 }
-                var iResult;
 
                 if (typeof iName == 'string') {
                     if (typeof iValue == 'function') {
                         for (var i = 0;  i < iElement.length;  i++)
-                            iResult = this[iType].set(iElement[i], iName, iValue.call(
+                            this[iType].set(iElement[i], iName, iValue.call(
                                 iElement[i],  i,  this[iType].get(iElement[i], iName)
                             ));
-                        return  iResult || iElement;
+                        return iElement;
                     } else {
-                        iResult = { };
-                        iResult[iName] = iValue;
-                        iName = iResult;
-                        iResult = undefined;
+                        var _Value_ = { };
+                        _Value_[iName] = iValue;
+                        iName = _Value_;
                     }
                 }
                 for (var i = 0;  i < iElement.length;  i++)
                     for (var iKey in iName)
-                        iResult = this[iType].set(iElement[i], iKey, iName[iKey]);
+                        this[iType].set(iElement[i], iKey, iName[iKey]);
 
-                return  iResult || iElement;
+                return iElement;
             }
         };
 
@@ -784,8 +799,11 @@ define('iQuery',  function () {
             if (iValue !== null)  return iValue;
         },
         set:      function (iElement, iName, iValue) {
-            return  ($.Type(iElement) in _DOM_.TypeMap.root) ?
-                    false  :  iElement.setAttribute(iName, iValue);
+            if (
+                (! ($.Type(iElement) in _DOM_.TypeMap.root))  &&
+                (iValue !== undefined)
+            )
+                iElement.setAttribute(iName, iValue);
         },
         clear:    function (iElement, iName) {
             iElement.removeAttribute(iName);
@@ -827,7 +845,7 @@ define('iQuery',  function () {
         set:           function (iElement, iName, iValue) {
             if ($.Type(iElement) in _DOM_.TypeMap.root)  return false;
 
-            if ((! isNaN( Number(iValue) ))  &&  iName.match($.cssPX))
+            if ($.isNumeric(iValue) && iName.match($.cssPX))
                 iValue += 'px';
 
             iElement.style[this.Set_Method](iName, String(iValue), 'important');
@@ -872,46 +890,25 @@ define('iQuery',  function () {
             }
         }
     };
-    /* ----- DOM Content ----- */
-
-    _DOM_.innerHTML = {
-        set:    function (iElement, iHTML) {
-            var IE_Scope = String(iHTML).match(
-                    /^[^<]*<\s*(head|meta|title|link|style|script|noscript|(!--[^>]*--))[^>]*>/i
-                );
-
-            if ($.browser.modern || (! IE_Scope))
-                iElement.innerHTML = iHTML;
-            else {
-                iElement.innerHTML = 'IE_Scope' + iHTML;
-                var iChild = iElement.childNodes;
-                iChild[0].nodeValue = iChild[0].nodeValue.slice(8);
-                if (! iChild[0].nodeValue.length)
-                    iElement.removeChild(iChild[0]);
-            }
-
-            return $.makeArray(iElement.childNodes);
-        }
-    };
-
 /* ---------- DOM Constructor ---------- */
+
     function DOM_Create(TagName, AttrList) {
         var iNew,  iTag = TagName.match(/^\s*<(.+?)\s*\/?>([\s\S]+)?/);
 
         if (! iTag)  return  [ DOM.createTextNode(TagName) ];
 
-        iNew = (iTag[2]  ||  (iTag[1].split(/\s/).length > 1))  ?
-            _DOM_.innerHTML.set(
-                DOM.createElement('div'),  TagName
-            )  :  [
-                DOM.createElement( iTag[1] )
-            ];
+        if (iTag[2]  ||  (iTag[1].split(/\s/).length > 1)) {
+            iNew = DOM.createElement('div');
+            iNew.innerHTML = TagName;
+            iNew = $.makeArray(iNew.childNodes);
+        } else
+            iNew = [DOM.createElement( iTag[1] )];
 
         if ((iNew.length == 1)  &&  (iNew[0].nodeType == 1)  &&  AttrList)
             $.each(AttrList,  function (iKey, iValue) {
                 switch (iKey) {
                     case 'text':     return  iNew[0].textContent = iValue;
-                    case 'html':     return  _DOM_.innerHTML.set(iNew[0], iValue);
+                    case 'html':     return  iNew[0].innerHTML = iValue;
                     case 'style':    {
                         if ( $.isPlainObject(iValue) )
                             return  _DOM_.operate('Style', iNew, iValue);
@@ -1180,6 +1177,65 @@ define('iQuery',  function () {
     });
 
     /* ----- iQuery Instance Method ----- */
+
+    $.fn = $.prototype;
+    $.fn.extend = $.extend;
+
+    $.fn.extend({
+        splice:             Array.prototype.splice,
+        jquery:             '1.9.1',
+        iquery:             2.0,
+        pushStack:          function ($_New) {
+            $_New = $(DOM_Sort(
+                ($_New instanceof Array)  ?  $_New  :  $.makeArray($_New)
+            ));
+            $_New.prevObject = this;
+
+            return $_New;
+        },
+        attr:               function () {
+            return  _DOM_.operate('Attribute', this, arguments[0], arguments[1]);
+        },
+        prop:               function () {
+            return  _DOM_.operate('Property', this, arguments[0], arguments[1]);
+        },
+        data:               function () {
+            return  _DOM_.operate('Data', this, arguments[0], arguments[1]);
+        },
+        css:                function () {
+            return  _DOM_.operate('Style', this, arguments[0], arguments[1]);
+        },
+        index:              function (iTarget) {
+            if (! iTarget)
+                return  $.trace(this[0], 'previousElementSibling').length;
+
+            var iType = $.Type(iTarget);
+
+            switch (true) {
+                case (iType == 'String'):
+                    return  $.inArray(this[0], $(iTarget));
+                case ($.likeArray( iTarget )):
+                    if (! (iType in _DOM_.TypeMap.element)) {
+                        iTarget = iTarget[0];
+                        iType = $.Type(iTarget);
+                    }
+                case (iType in _DOM_.TypeMap.element):
+                    return  $.inArray(iTarget, this);
+            }
+            return -1;
+        }
+    });
+
+    return $;
+
+})(self,  self.document,  self.iQuery || iQuery);
+
+
+
+(function (BOM, DOM, $) {
+
+    var Array_Reverse = Array.prototype.reverse;
+
     function DOM_Size(iName) {
         iName = {
             scroll:    'scroll' + iName,
@@ -1252,6 +1308,7 @@ define('iQuery',  function () {
             }
         };
     }
+
     function DOM_Insert(iName) {
         return  function () {
             if (
@@ -1267,26 +1324,7 @@ define('iQuery',  function () {
         };
     }
 
-    var Array_Reverse = Array.prototype.reverse,  DOM_Proto = Element.prototype;
-
-    DOM_Proto.matches = DOM_Proto.matches || DOM_Proto.webkitMatchesSelector ||
-        DOM_Proto.msMatchesSelector || DOM_Proto.mozMatchesSelector;
-
-    $.fn = $.prototype;
-    $.fn.extend = $.extend;
-
     $.fn.extend({
-        splice:             Array.prototype.splice,
-        jquery:             '1.9.1',
-        iquery:             '1.0',
-        pushStack:          function ($_New) {
-            $_New = $(DOM_Sort(
-                ($_New instanceof Array)  ?  $_New  :  $.makeArray($_New)
-            ));
-            $_New.prevObject = this;
-
-            return $_New;
-        },
         add:                function () {
             return this.pushStack(
                 $.merge(this,  $.apply(BOM, arguments))
@@ -1299,25 +1337,6 @@ define('iQuery',  function () {
             return  this.pushStack(
                 [ ].slice.call(this,  Index,  (Index + 1) || undefined)
             );
-        },
-        index:              function (iTarget) {
-            if (! iTarget)
-                return  $.trace(this[0], 'previousElementSibling').length;
-
-            var iType = $.Type(iTarget);
-
-            switch (true) {
-                case (iType == 'String'):
-                    return  $.inArray(this[0], $(iTarget));
-                case ($.likeArray( iTarget )):
-                    if (! (iType in _DOM_.TypeMap.element)) {
-                        iTarget = iTarget[0];
-                        iType = $.Type(iTarget);
-                    }
-                case (iType in _DOM_.TypeMap.element):
-                    return  $.inArray(iTarget, this);
-            }
-            return -1;
         },
         each:               function () {
             return  $.each(this, arguments[0]);
@@ -1361,9 +1380,6 @@ define('iQuery',  function () {
 
             return this.pushStack($_Result);
         },
-        attr:               function () {
-            return  _DOM_.operate('Attribute', this, arguments[0], arguments[1]);
-        },
         removeAttr:         function (iAttr) {
             iAttr = iAttr.trim().split(/\s+/);
 
@@ -1371,12 +1387,6 @@ define('iQuery',  function () {
                 this.attr(iAttr[i], null);
 
             return this;
-        },
-        prop:               function () {
-            return  _DOM_.operate('Property', this, arguments[0], arguments[1]);
-        },
-        data:               function () {
-            return  _DOM_.operate('Data', this, arguments[0], arguments[1]);
         },
         addBack:            function () {
             return  this.pushStack( $.merge(this, this.prevObject) );
@@ -1529,12 +1539,9 @@ define('iQuery',  function () {
             this.empty();
 
             for (var i = 0;  i < this.length;  i++)
-                _DOM_.innerHTML.set(this[i], iHTML);
+                this[i].innerHTML = iHTML;
 
             return  this;
-        },
-        css:                function () {
-            return  _DOM_.operate('Style', this, arguments[0], arguments[1]);
         },
         width:              DOM_Size('Width'),
         height:             DOM_Size('Height'),
@@ -1673,8 +1680,6 @@ define('iQuery',  function () {
             return  $.param( this.serializeArray() );
         }
     });
-
-    return $;
 
 })(self,  self.document,  self.iQuery || iQuery);
 
@@ -2084,8 +2089,6 @@ define('iQuery',  function () {
     ))
         $.fn[iName] = Event_Method(iName);
 
-    if ($.browser.mobile)  $.fn.click = $.fn.tap;
-
 
 /* ---------- Complex Events ---------- */
 
@@ -2198,61 +2201,61 @@ define('iQuery',  function () {
 
 /* ---------- Single Finger Touch ---------- */
 
+    var $_DOM = $(DOM);
+
     function get_Touch(iEvent) {
-        if (! iEvent.timeStamp)
-            iEvent.timeStamp = $.now();
+        var iTouch = iEvent;
 
-        if (! $.browser.mobile)  return iEvent;
-
-        try {
-            return iEvent.changedTouches[0];
+        if ($.browser.mobile)  try {
+            iTouch = iEvent.changedTouches[0];
         } catch (iError) {
-            return iEvent.touches[0];
+            iTouch = iEvent.touches[0];
         }
-    }
 
-    var Touch_Data,  $_DOM = $(DOM);
+        iTouch.timeStamp = iEvent.timeStamp || $.now();
+
+        return iTouch;
+    }
 
     $_DOM.bind(
         $.browser.mobile ? 'touchstart MSPointerDown' : 'mousedown',
         function (iEvent) {
-            var iTouch = get_Touch(iEvent);
-
-            Touch_Data = {
-                pX:      iTouch.pageX,
-                pY:      iTouch.pageY,
-                time:    iEvent.timeStamp
-            };
+            $(iEvent.target).data('_Gesture_Event_', get_Touch(iEvent));
         }
     ).bind(
         $.browser.mobile ? 'touchend touchcancel MSPointerUp' : 'mouseup',
         function (iEvent) {
-            if (! Touch_Data)  return;
+            var $_Target = $(iEvent.target);
 
-            var iTouch = get_Touch(iEvent);
+            var iStart = $_Target.data('_Gesture_Event_');
 
-            var swipeLeft = Touch_Data.pX - iTouch.pageX,
-                swipeTop = Touch_Data.pY - iTouch.pageY,
-                iDuring = iEvent.timeStamp - Touch_Data.time;
+            if (! iStart)  return;
+
+            $_Target.data('_Gesture_Event_', null);
+
+            var iEnd = get_Touch(iEvent);
+
+            iEvent = {
+                target:    $_Target[0],
+                detail:    iEnd.timeStamp - iStart.timeStamp,
+                deltaX:    iStart.pageX - iEnd.pageX,
+                deltaY:    iStart.pageY - iEnd.pageY
+            };
 
             var iShift = Math.sqrt(
-                    Math.pow(swipeLeft, 2)  +  Math.pow(swipeTop, 2)
-                ),
-                _Event_;
+                    Math.pow(iEvent.deltaX, 2)  +  Math.pow(iEvent.deltaY, 2)
+                );
 
-            if (iDuring > 300)
-                _Event_ = 'press';
+            if (iEvent.detail > 300)
+                iEvent.type = 'press';
             else if (iShift < 22)
-                _Event_ = 'tap';
-            else
-                _Event_ = {
-                    type:      'swipe',
-                    deltaX:    swipeLeft,
-                    deltaY:    swipeTop,
-                    detail:    iShift
-                };
+                iEvent.type = 'tap';
+            else {
+                iEvent.type = 'swipe';
+                iEvent.detail = iShift;
+            }
 
-            $(iEvent.target).trigger(_Event_);
+            $_Target.trigger(iEvent);
         }
     );
 
@@ -2417,17 +2420,16 @@ define('iQuery',  function () {
                     return  (this.nodeType == 1);
                 })[0];
             }
-        };
+        },
+        DOM_Proto = Element.prototype;
 
     for (var iName in iGetter)
-        Object.defineProperty(Element.prototype, iName, {
-            get:    iGetter[iName]
-        });
+        Object.defineProperty(DOM_Proto,  iName,  {get: iGetter[iName]});
 
 
 /* ---------- DOM Text Content ---------- */
 
-    Object.defineProperty(Element.prototype, 'textContent', {
+    Object.defineProperty(DOM_Proto, 'textContent', {
         get:    function () {
             return this.innerText;
         },
@@ -2440,27 +2442,17 @@ define('iQuery',  function () {
         }
     });
 
-/* ---------- DOM Selector Match ---------- */
-
-    Element.prototype.matches = function () {
-        if (! this.parentNode)  $('<div />')[0].appendChild(this);
-
-        return  ($.inArray(
-            this,  this.parentNode.querySelectorAll( arguments[0] )
-        ) > -1);
-    };
-
 /* ---------- DOM Attribute Name ---------- */
 
     var iAlias = {
             'class':    'className',
             'for':      'htmlFor'
         },
-        Get_Attribute = Element.prototype.getAttribute,
-        Set_Attribute = Element.prototype.setAttribute,
-        Remove_Attribute = Element.prototype.removeAttribute;
+        Get_Attribute = DOM_Proto.getAttribute,
+        Set_Attribute = DOM_Proto.setAttribute,
+        Remove_Attribute = DOM_Proto.removeAttribute;
 
-    $.extend(Element.prototype, {
+    $.extend(DOM_Proto, {
         getAttribute:    function (iName) {
             return  iAlias[iName] ?
                 this[iAlias[iName]]  :  Get_Attribute.call(this, iName,  0);
@@ -2516,6 +2508,15 @@ define('iQuery',  function () {
         return iArgs.join('');
     }
 
+    function EM_PX(iEM) {
+        var Font_Size = this.ownerNode.parentNode.currentStyle.fontSize;
+
+        if (Font_Size.slice(-2).toLowerCase() == 'pt')
+            Font_Size = Font_Size.slice(0, -2) * BOM.screen.deviceXDPI / 72;
+
+        return  iEM * parseFloat(Font_Size);
+    }
+
     $.extend(CSSStyleDeclaration.prototype, {
         getPropertyValue:    function (iName) {
             var iScale = 1;
@@ -2529,9 +2530,13 @@ define('iQuery',  function () {
             var iStyle = this[ iName.toCamelCase() ];
             var iNumber = parseFloat(iStyle);
 
-            return  isNaN(iNumber) ? iStyle : (
-                (iNumber / iScale)  +  ($.cssPX[iName] ? 'px' : '')
-            );
+            if (! isNaN(iNumber)) {
+                if (iStyle.slice(-2).toLowerCase() == 'em')
+                    iNumber = EM_PX.call(this, iNumber);
+                iStyle =  (iNumber / iScale)  +  ($.cssPX[iName] ? 'px' : '')
+            }
+
+            return iStyle;
         },
         setPropertyValue:    function (iName, iValue) {
             this[this.length++] = iName;
@@ -2663,17 +2668,16 @@ define('iQuery',  function () {
 
 /* ---------- XML DOM Parser ---------- */
 
-    var IE_DOMParser = $.map([
-            'MSXML2.DOMDocument.6.0',
-            'MSXML2.DOMDocument.5.0',
-            'MSXML2.DOMDocument.4.0',
-            'MSXML2.DOMDocument.3.0',
-            'MSXML2.DOMDocument',
-            'Microsoft.XMLDOM'
-        ],  function () {
-            new ActiveXObject(arguments[0]);
-            return arguments[0];
-        })[0];
+    var IE_DOMParser = (function () {
+            for (var i = 0;  arguments[i];  i++)  try {
+                new  ActiveXObject( arguments[i] );
+                return arguments[i];
+            } catch (iError) { }
+        })(
+            'MSXML2.DOMDocument.6.0', 'MSXML2.DOMDocument.5.0',
+            'MSXML2.DOMDocument.4.0', 'MSXML2.DOMDocument.3.0',
+            'MSXML2.DOMDocument',     'Microsoft.XMLDOM'
+        );
 
     function XML_Create() {
         var iXML = new ActiveXObject(IE_DOMParser);
@@ -2742,6 +2746,20 @@ define('iQuery',  function () {
             }
         });
 
+/* ---------- Element CSS Selector Match ---------- */
+
+    var DOM_Proto = Element.prototype;
+
+    DOM_Proto.matches = DOM_Proto.matches || DOM_Proto.webkitMatchesSelector ||
+        DOM_Proto.msMatchesSelector || DOM_Proto.mozMatchesSelector ||
+        function () {
+            if (! this.parentNode)  $('<div />')[0].appendChild(this);
+
+            return  ($.inArray(
+                this,  this.parentNode.querySelectorAll( arguments[0] )
+            ) > -1);
+        };
+
 
     if (! ($.browser.msie < 11))  return;
 
@@ -2755,7 +2773,7 @@ define('iQuery',  function () {
         }
     }
 
-    Object.defineProperty(Element.prototype, 'dataset', {
+    Object.defineProperty(DOM_Proto, 'dataset', {
         get:    function () {
             return  new DOMStringMap(this);
         }
@@ -2779,9 +2797,7 @@ define('iQuery',  function () {
 
 /* ---------- DOM Children ---------- */
 
-    var _Children_ = Object.getOwnPropertyDescriptor(
-            Element.prototype,  'children'
-        );
+    var _Children_ = Object.getOwnPropertyDescriptor(DOM_Proto, 'children');
 
     function HTMLCollection() {
         var iChildren = _Children_.get.call( arguments[0] );
@@ -2799,7 +2815,7 @@ define('iQuery',  function () {
             return  this[ arguments[0] ]  ||  null;
         };
 
-    Object.defineProperty(Element.prototype, 'children', {
+    Object.defineProperty(DOM_Proto, 'children', {
         get:    function () {
             return  new HTMLCollection(this);
         }
@@ -2826,61 +2842,31 @@ define('iQuery',  function () {
         return  (Array.prototype.indexOf.call(this, iClass) > -1);
     };
 
-    Object.defineProperty(Element.prototype, 'classList', {
+    Object.defineProperty(DOM_Proto, 'classList', {
         get:    function () {
             return  new DOMTokenList(this);
         }
     });
 
-    /* ----- History API ----- */
+/* ---------- DOM InnerHTML ---------- */
 
-    var _BOM_,      $_BOM = $(BOM),
-        _Pushing_,  _State_ = [[null, DOM.title, DOM.URL]];
+    var InnerHTML = Object.getOwnPropertyDescriptor(DOM_Proto, 'innerHTML');
 
-    $(DOM).ready(function () {
-        var iFrame = $('#_iQuery_SandBox_')[0];
+    Object.defineProperty(DOM_Proto, 'innerHTML', {
+        set:    function (iHTML) {
+            if (! String(iHTML).match(
+                /^[^<]*<\s*(head|meta|title|link|style|script|noscript|(!--[^>]*--))[^>]*>/i
+            ))
+                return  InnerHTML.set.call(this, iHTML);
 
-        _BOM_ = iFrame.contentWindow;
+            InnerHTML.set.call(this,  'IE_Scope' + iHTML);
 
-        iFrame.onload = function () {
-            if (_Pushing_) {
-                _Pushing_ = false;
-                return;
-            }
+            var iChild = this.childNodes;
+            iChild[0].nodeValue = iChild[0].nodeValue.slice(8);
 
-            var iState = _State_[ _BOM_.location.search.slice(7) ];
-            if (! iState)  return;
-
-            BOM.history.state = iState[0];
-            DOM.title = iState[1];
-
-            $_BOM.trigger({
-                type:     'popstate',
-                state:    iState[0]
-            });
-        };
-    });
-
-    BOM.history.pushState = function (iState, iTitle, iURL) {
-        for (var iKey in iState)
-            if (! $.isData(iState[iKey]))
-                throw ReferenceError("The History State can't be Complex Object !");
-
-        if (typeof iTitle != 'string')
-            throw TypeError("The History State needs a Title String !");
-
-        if (_BOM_) {
-            DOM.title = iTitle;
-            if ($.browser.modern)  _BOM_.document.title = iTitle;
-            _Pushing_ = true;
-            _BOM_.location.search = 'index=' + (_State_.push(arguments) - 1);
+            if (! iChild[0].nodeValue[0])  this.removeChild( iChild[0] );
         }
-    };
-
-    BOM.history.replaceState = function () {
-        _State_ = [ ];
-        this.pushState.apply(this, arguments);
-    };
+    });
 
 })(self,  self.document,  self.iQuery || iQuery);
 
@@ -2897,7 +2883,7 @@ define('iQuery',  function () {
             }
         },
         Array_Reverse = Array.prototype.reverse,
-        Rolling_Style = $.makeSet('auto', 'scroll', 'hidden');
+        Rolling_Style = $.makeSet('auto', 'scroll');
 
     $.fn.extend({
         reduce:           function (iMethod, iKey, iCallback) {
@@ -2910,16 +2896,6 @@ define('iQuery',  function () {
             return  $.map(this,  function () {
                 return  $( arguments[0] )[iMethod](iKey);
             }).reduce(iCallback);
-        },
-        refresh:          function () {
-            if (! this.selector)  return this;
-
-            var $_New = $(this.selector, this.context);
-
-            if (this.prevObject instanceof $)
-                $_New = this.prevObject.pushStack($_New);
-
-            return $_New;
         },
         sameParents:      function () {
             if (this.length < 2)  return this.parents();
@@ -2949,62 +2925,56 @@ define('iQuery',  function () {
         },
         scrollParents:    function () {
             return Array_Reverse.call(this.pushStack(
-                $.map(this.parents(),  function (_DOM_) {
-                    var iCSS = $(_DOM_).css([
-                            'width', 'max-width', 'height', 'max-height',
-                            'overflow-x', 'overflow-y'
+                $.map(this.parents(),  function ($_Parent) {
+                    $_Parent = $($_Parent);
+
+                    var iCSS = $_Parent.css([
+                            'max-width', 'max-height', 'overflow-x', 'overflow-y'
                         ]);
 
                     if (
                         (
-                            (iCSS.width || iCSS['max-width'])  &&
+                            ($_Parent.width() || parseFloat(iCSS['max-width']))  &&
                             (iCSS['overflow-x'] in Rolling_Style)
                         )  ||
                         (
-                            (iCSS.height || iCSS['max-height'])  &&
+                            ($_Parent.height() || parseFloat(iCSS['max-height']))  &&
                             (iCSS['overflow-y'] in Rolling_Style)
                         )
                     )
-                        return _DOM_;
+                        return $_Parent[0];
                 })
             ));
         },
         inViewport:       function () {
             for (var i = 0, _OS_, $_BOM, BOM_W, BOM_H;  this[i];  i++) {
-                _OS_ = $( this[i] ).offset();
+                _OS_ = this[i].getBoundingClientRect();
 
                 $_BOM = $( this[i].ownerDocument.defaultView );
-
                 BOM_W = $_BOM.width(),  BOM_H = $_BOM.height();
 
                 if (
-                    (_OS_.left > BOM_W)  ||
-                    ((_OS_.top - $(DOM).scrollTop())  >  BOM_H)
+                    (_OS_.left < 0)  ||  (_OS_.left > BOM_W)  ||
+                    (_OS_.top < 0)  ||  (_OS_.top > BOM_H)
                 )
                     return false;
             }
 
             return true;
         },
-        scrollTo:         function ($_Target) {
-            $_Target = $($_Target);
+        scrollTo:         function () {
+            var $_This = this;
 
-            this.has($_Target).each(function () {
-                var $_Scroll = $(this);
+            $( arguments[0] ).each(function () {
+                var $_Scroll = $_This.has(this);
 
-                var iCoord = $($.map($_Target,  function () {
-                        if ( $.contains($_Scroll[0], arguments[0]) )
-                            return arguments[0];
-                    })).offset(),
-                    _Coord_ = $_Scroll.offset();
+                var iCoord = $(this).offset(),  _Coord_ = $_Scroll.offset();
 
                 if (! $_Scroll.length)  return;
 
                 $_Scroll.animate({
-                    scrollTop:
-                        $_Scroll.scrollTop()  +  (iCoord.top - _Coord_.top),
-                    scrollLeft:
-                        $_Scroll.scrollLeft()  +  (iCoord.left - _Coord_.left)
+                    scrollTop:     iCoord.top - _Coord_.top,
+                    scrollLeft:    iCoord.left - _Coord_.left
                 });
             });
 
@@ -3150,7 +3120,7 @@ define('iQuery',  function () {
     var Code_Indent = $.browser.modern ? '' : ' '.repeat(4);
 
     function CSS_Attribute(iName, iValue) {
-        if ((! isNaN( Number(iValue) ))  &&  iName.match($.cssPX))
+        if ($.isNumeric(iValue) && iName.match($.cssPX))
             iValue += 'px';
 
         return  [iName, ':', Code_Indent, iValue].join('');
@@ -3213,11 +3183,6 @@ define('iQuery',  function () {
         $.extend(this, arguments[0]);
         this.length = arguments[0].length;
     }
-
-    var DOM_Proto = Element.prototype;
-
-    DOM_Proto.matches = DOM_Proto.matches || DOM_Proto.webkitMatchesSelector ||
-        DOM_Proto.msMatchesSelector || DOM_Proto.mozMatchesSelector;
 
     if (typeof BOM.getMatchedCSSRules != 'function')
         BOM.getMatchedCSSRules = function (iElement, iPseudo) {
@@ -3442,25 +3407,23 @@ define('iQuery',  function () {
         return 0;
     }
 
-    var Tag_Style = { },
-        $_SandBox = $('<iframe />', {
-            id:       '_iQuery_SandBox_',
-            style:    'display: none',
-            src:      ($.browser.msie < 10)  ?  'blank.html'  :  'about:blank'
-        });
+    var Tag_Style = { },  _BOM_;
+
     $(DOM).ready(function () {
-        $_SandBox.appendTo( this.body );
+        _BOM_ = $('<iframe />', {
+            id:       '_CSS_SandBox_',
+            style:    'display: none',
+            src:      'about:blank'
+        }).appendTo(this.body)[0].contentWindow;
     });
 
     function Tag_Default_CSS(iTagName) {
-        var _BOM_ = $_SandBox[0].contentWindow;
-
         if (! Tag_Style[iTagName]) {
             var $_Default = $('<' + iTagName + ' />').appendTo(
                     _BOM_.document.body
                 );
             Tag_Style[iTagName] = $.extend(
-                { },  _BOM_.getComputedStyle( $_Default[0] )
+                { },  BOM.getComputedStyle( $_Default[0] )
             );
             $_Default.remove();
         }
@@ -3536,7 +3499,7 @@ define('iQuery',  function () {
         var $_This = this.data('_Animate_', 0);
 
         $.each(CSS_Final,  function (iName) {
-            if (isNaN( Number(this) ))  return  $_This.css(iName, this);
+            if (! $.isNumeric(this))  return  $_This.css(iName, this);
 
             $_This.data('_Animate_',  $_This.data('_Animate_') + 1);
 
@@ -3614,7 +3577,7 @@ define('iQuery',  function () {
             ).call(
                 this,
                 CSS_Final,
-                isNaN(Number( iArgs[0] ))  ?  0.4  :  (iArgs.shift() / 1000),
+                $.isNumeric( iArgs[0] )  ?  (iArgs.shift() / 1000)  :  0.4,
                 (typeof iArgs[0] == 'string')  ?  iArgs.shift()  :  '',
                 (typeof iArgs[0] == 'function')  &&  iArgs[0]
             );
@@ -4352,7 +4315,7 @@ define('iQuery',  function () {
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v1.0  (2016-06-16)  Stable
+//      [Version]    v2.0  (2016-06-28)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
