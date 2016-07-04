@@ -1,9 +1,11 @@
-if ((typeof this.define != 'function')  ||  (! this.define.amd))
-    this.define = function () {
-        return  arguments[arguments.length - 1]();
-    };
+(function () {
 
-define('iQuery',  function () {
+    if ((typeof this.define != 'function')  ||  (! this.define.amd))
+        arguments[0]();
+    else
+        this.define('iQuery', arguments[0]);
+
+})(function () {
 
     var iQuery = {fn:  { }};
 
@@ -362,8 +364,17 @@ define('iQuery',  function () {
                 Object.prototype.toString.call(iValue)
                     .split(' ')[1].slice(0, -1).toLowerCase();
         },
-        isNumeric:        function () {
-            return  (! isNaN(Number( arguments[0] )));
+        isNumeric:        function (iValue) {
+            if ((iValue === '')  ||  (iValue === Infinity)  ||  isNaN(iValue))
+                return false;
+
+            switch (typeof iValue) {
+                case 'string':    break;
+                case 'number':    break;
+                default:          return false;
+            }
+
+            return  (typeof +iValue == 'number');
         },
         isEmptyObject:    function () {
             for (var iKey in arguments[0])
@@ -2508,15 +2519,6 @@ define('iQuery',  function () {
         return iArgs.join('');
     }
 
-    function EM_PX(iEM) {
-        var Font_Size = this.ownerNode.parentNode.currentStyle.fontSize;
-
-        if (Font_Size.slice(-2).toLowerCase() == 'pt')
-            Font_Size = Font_Size.slice(0, -2) * BOM.screen.deviceXDPI / 72;
-
-        return  iEM * parseFloat(Font_Size);
-    }
-
     $.extend(CSSStyleDeclaration.prototype, {
         getPropertyValue:    function (iName) {
             var iScale = 1;
@@ -2531,8 +2533,18 @@ define('iQuery',  function () {
             var iNumber = parseFloat(iStyle);
 
             if (! isNaN(iNumber)) {
-                if (iStyle.slice(-2).toLowerCase() == 'em')
-                    iNumber = EM_PX.call(this, iNumber);
+                switch ( iStyle.slice(-2).toLowerCase() ) {
+                    case 'em':    {
+                        var Font_Size =
+                                this.ownerNode.parentNode.currentStyle.fontSize;
+
+                        iNumber *= parseFloat(Font_Size);
+
+                        if (Font_Size.slice(-2).toLowerCase() != 'pt')  break;
+                    }
+                    case 'pt':    iNumber = iNumber * BOM.screen.deviceXDPI / 72;
+                }
+
                 iStyle =  (iNumber / iScale)  +  ($.cssPX[iName] ? 'px' : '')
             }
 
@@ -2963,6 +2975,8 @@ define('iQuery',  function () {
             return true;
         },
         scrollTo:         function () {
+            if (! this[0])  return this;
+
             var $_This = this;
 
             $( arguments[0] ).each(function () {
@@ -2973,8 +2987,12 @@ define('iQuery',  function () {
                 if (! $_Scroll.length)  return;
 
                 $_Scroll.animate({
-                    scrollTop:     iCoord.top - _Coord_.top,
-                    scrollLeft:    iCoord.left - _Coord_.left
+                    scrollTop:     (! _Coord_.top)  ?  iCoord.top  :  (
+                        $_Scroll.scrollTop()  +  (iCoord.top - _Coord_.top)
+                    ),
+                    scrollLeft:    (! _Coord_.left)  ?  iCoord.left  :  (
+                        $_Scroll.scrollLeft()  +  (iCoord.left - _Coord_.left)
+                    )
                 });
             });
 
@@ -3741,14 +3759,14 @@ define('iQuery',  function () {
             return this;
         },
         trigger:    function () {
-            var iArgs = $.makeArray(arguments),  iReturn;
+            var iArgs = $.makeArray(arguments),  iReturn = [ ];
 
             var iData = $.likeArray(iArgs[iArgs.length - 1])  &&  iArgs.pop();
 
             iArgs.push(function () {
                 var _Return_ = arguments[0].apply(this, iData);
 
-                iReturn = $.isData(_Return_) ? _Return_ : iReturn;
+                if ($.isData(_Return_))  iReturn.push(_Return_);
             });
 
             Each_Row.apply(this, iArgs);
@@ -3949,7 +3967,7 @@ define('iQuery',  function () {
 
         iAJAX.trigger('prefilter', iArgs);
 
-        iXHR = iAJAX.trigger('transport', iOption.dataType, iArgs);
+        iXHR = iAJAX.trigger('transport', iOption.dataType, iArgs).slice(-1)[0];
 
         iXHR.send({ },  $.proxy(AJAX_Complete, iXHR, iOption));
 
@@ -4315,7 +4333,7 @@ define('iQuery',  function () {
 //                >>>  iQuery.js  <<<
 //
 //
-//      [Version]    v2.0  (2016-06-28)  Stable
+//      [Version]    v2.0  (2016-07-04)  Stable
 //
 //      [Usage]      A Light-weight jQuery Compatible API
 //                   with IE 8+ compatibility.
