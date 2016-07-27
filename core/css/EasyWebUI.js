@@ -2,7 +2,7 @@
 //          >>>  EasyWebUI Component Library  <<<
 //
 //
-//      [Version]     v3.0  (2016-07-20)  Stable
+//      [Version]     v3.1  (2016-07-22)  Stable
 //
 //      [Based on]    iQuery v1  or  jQuery (with jQuery+),
 //
@@ -14,6 +14,16 @@
 //
 //            (C)2014-2016    shiy2008@gmail.com
 //
+
+
+(function () {
+
+    if ((typeof this.define != 'function')  ||  (! this.define.amd))
+        arguments[0]();
+    else
+        this.define('EasyWebUI', ['iQuery+'], arguments[0]);
+
+})(function () {
 
 
 /* ---------- HTML 5 / CSS 3 补丁 ---------- */
@@ -691,7 +701,7 @@
         return this;
     };
 
-/* ---------- 数据表 控件  v0.1 ---------- */
+/* ---------- 数据表 控件  v0.2 ---------- */
 
     var Sort_Class = {
             '':            'SortDown',
@@ -699,32 +709,75 @@
             'SortDown':    'SortUp'
         };
 
-    $.fn.iTable = function () {
-        return  this.each(function () {
-            var iLV = $.ListView( $('tbody', this) );
+    function Data_Page(iSum, iUnit) {
+        if (iSum > -1)
+            return  $.map(Array(Math.ceil(iSum / iUnit)),  function () {
+                return  {index:  arguments[1] + 1};
+            });
+    }
 
-            $('th', $(this).children('thead')[0]).click(function () {
-                var $_This = $(this);
+    $.fn.iTable = function (DataURL) {
+        if (! this[0])  return this;
 
-                var iClass = ($_This.attr('class') || '').match(
-                        /\s?(Sort(Up|Down))\s?/
-                    );
-                iClass = iClass ? iClass[1] : '';
+        var iLV = $.ListView( $('tbody', this[0]) );
 
-                $_This.removeClass(iClass).addClass( Sort_Class[iClass] );
+        $('th', this[0]).click(function () {
+            var $_This = $(this);
 
-                var iNO = (Sort_Class[iClass] == 'SortUp')  ?  0.5  :  -0.5,
-                    Index = $_This.index();
+            var iClass = ($_This.attr('class') || '').match(
+                    /\s?(Sort(Up|Down))\s?/
+                );
+            iClass = iClass ? iClass[1] : '';
 
-                iLV.sort(function () {
-                    var A = $( arguments[2.5 - iNO][0].children[Index] ).text(),
-                        B = $( arguments[2.5 + iNO][0].children[Index] ).text();
+            $_This.removeClass(iClass).addClass( Sort_Class[iClass] );
 
-                    return  isNaN(parseFloat( A ))  ?
-                        A.localeCompare( B )  :  (parseFloat(A) - parseFloat(B));
-                });
+            var iNO = (Sort_Class[iClass] == 'SortUp')  ?  0.5  :  -0.5,
+                Index = $_This.index();
+
+            iLV.sort(function () {
+                var A = $( arguments[2.5 - iNO][0].children[Index] ).text(),
+                    B = $( arguments[2.5 + iNO][0].children[Index] ).text();
+
+                return  isNaN(parseFloat( A ))  ?
+                    A.localeCompare( B )  :  (parseFloat(A) - parseFloat(B));
             });
         });
+
+        if (typeof DataURL != 'string')  return this.eq(0);
+
+        var $_tFoot = $('tfoot', this[0]);
+        $_tFoot = $_tFoot[0]  ?  $_tFoot  :  $('<tfoot />').appendTo( this[0] );
+
+        $('<tr><td><ol><li></li></ol></td></tr>').appendTo( $_tFoot )
+            .children('td').attr(
+                'colspan',  $('tbody > tr', this[0])[0].children.length
+            );
+
+        var iPage = $.ListView($('ol', $_tFoot[0])[0],  false,  function () {
+                arguments[0].text( ++arguments[2] );
+            });
+
+        iPage.$_View.on('click',  'li',  function () {
+            var Index = $(this).index() + 1;
+
+            $.getJSON(
+                DataURL.replace(/^([^\?]+\??)(.*)/,  function () {
+                    return  arguments[1] + 'page=' + Index + (
+                        arguments[2]  ?  ('&' + arguments[2])  :  ''
+                    );
+                }),
+                function (iData) {
+                    iLV.clear().render(iData.tngou);
+
+                    iPage.clear().render(
+                        Data_Page(iData.total, 10)
+                    );
+                }
+            );
+        });
+        iPage[0].click();
+
+        return this.eq(0);
     };
 
 /* ---------- 标签页 控件  v0.5 ---------- */
@@ -769,7 +822,7 @@
                 iSelector = ['input[type="radio"]',  'div, section, .Body'];
             iSelector[Label_At ? 'unshift' : 'push']('label');
 
-            $.ListView(this,  iSelector,  function ($_Tab_Item) {
+            $.ListView(this,  iSelector,  false,  function ($_Tab_Item) {
                 var _UUID_ = $.uuid();
 
                 var $_Label = $_Tab_Item.filter('label').attr('for', _UUID_),
@@ -889,7 +942,7 @@
     $.fn.iReadNav = function ($_Context) {
         return  this.each(function () {
             var iMainNav = $.TreeView(
-                    $.ListView(this,  function ($_Item, iValue) {
+                    $.ListView(this,  false,  function ($_Item, iValue) {
 
                         $('a', $_Item[0]).text(iValue.text)[0].href =
                             '#' + iValue.id;
@@ -922,9 +975,9 @@
                 if (! $.contains(this, $_Anchor[0]))  return;
 
                 $_Anchor = $(
-                    'a[href="#' + $_Anchor[0].id + '"]',  iMainNav.unit.$_View[0]
+                    'a[href="#' + $_Anchor[0].id + '"]',  iMainNav.$_View[0]
                 );
-                $('.ListView_Item.active', iMainNav.unit.$_View[0])
+                $('.ListView_Item.active', iMainNav.$_View[0])
                     .removeClass('active');
 
                 $.ListView.getInstance( $_Anchor.parents('.TreeNode')[0] )
@@ -992,7 +1045,7 @@
     $.fn.iTree = function (Sub_Key, onInsert) {
         return  this.each(function () {
             var iOrgTree = $.TreeView(
-                    $.ListView(this, onInsert),
+                    $.ListView(this, false, onInsert),
                     Sub_Key,
                     2,
                     function (iFork, iDepth, iData) {
@@ -1023,23 +1076,24 @@
                     ), 'important');
                 });
 
-            iOrgTree.unit.$_View
-                .on('Insert',  '.ListView_Item',  function () {
-                    var iSub = $.ListView.getInstance(
-                            $(this).children('.TreeNode')
-                        );
+            iOrgTree.$_View.on('Insert',  '.ListView_Item',  function () {
 
-                    if ( iSub )
-                        iSub.insert( arguments[1] );
-                    else
-                        iOrgTree.branch(this, arguments[1]);
+                var iSub = $.ListView.getInstance(
+                        $(this).children('.TreeNode')
+                    );
 
-                    return false;
-                })
-                .on('Edit',  '.ListView_Item',  function () {
-                    return  (! $(arguments[0].target).contentEdit());
-                })
-                .on('Delete',  '.ListView_Item', branchDelete);
+                if ( iSub )
+                    iSub.insert( arguments[1] );
+                else
+                    iOrgTree.branch(this, arguments[1]);
+
+                return false;
+
+            }).on('Edit',  '.ListView_Item',  function () {
+
+                return  (! $(arguments[0].target).contentEdit());
+
+            }).on('Delete',  '.ListView_Item', branchDelete);
         });
     };
 
@@ -1132,3 +1186,6 @@
     );
 
 })(self,  self.document,  self.jQuery || self.Zepto);
+
+
+});
