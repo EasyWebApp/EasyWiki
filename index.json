@@ -1,0 +1,21 @@
+[
+    {
+        "title":    "EWAwiki",
+        "href":     "#"
+    },
+    {
+        "title":        "概览",
+        "href":         "#!ReadMe.md",
+        "autofocus":    true
+    },
+    {
+        "title":     "开源代码库",
+        "target":    "_blank",
+        "href":      "//git.oschina.net/Tech_Query/EasyWiki/tree/EWAwiki/"
+    },
+    {
+        "title":     "关于作者",
+        "target":    "_blank",
+        "href":      "//tech_query.oschina.io/"
+    }
+]
