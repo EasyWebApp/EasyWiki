@@ -10,12 +10,43 @@
 
 var DS_Inherit = (function (BOM, DOM, $) {
 
-    function DataScope(iData) {
-        if (! $.isEmptyObject(iData))  $.extend(this, iData);
+    function DataScope() {
+        this.extend( arguments[0] );
     }
 
     var iPrototype = {
             constructor:    DataScope,
+            extend:         function (iData) {
+                switch (true) {
+                    case  $.likeArray( iData ):    {
+                        this.length = iData.length;
+
+                        Array.prototype.splice.call(
+                            this,  iData.length,  iData.length
+                        );
+                    }
+                    case  (! $.isEmptyObject(iData)):    $.extend(this, iData);
+                }
+
+                return this;
+            },
+            setValue:       function (iName) {
+                var iScope = this,  _Parent_;
+
+                while (! (
+                    $.isEmptyObject(iScope)  ||  iScope.hasOwnProperty(iName)
+                )) {
+                    _Parent_ = Object.getPrototypeOf( iScope );
+
+                    if (_Parent_ === Object.prototype)  break;
+
+                    iScope = _Parent_;
+                }
+
+                iScope[iName] = arguments[1];
+
+                return iScope;
+            },
             toString:       function () {
                 return  '[object DataScope]';
             },
@@ -27,20 +58,34 @@ var DS_Inherit = (function (BOM, DOM, $) {
                 for (var iKey in this)
                     if (
                         this.hasOwnProperty(iKey)  &&
-                        (! iKey.match(/^(\d+|length)$/))
+                        (! iKey.match(/^(\d+|length)$/))  &&
+                        (typeof this[iKey] != 'function')
                     )
                         iValue[iKey] = this[iKey];
 
                 return iValue;
+            },
+            isNoValue:      function () {
+                for (var iKey in this)
+                    if (typeof this[iKey] != 'function')
+                        return false;
+
+                return true;
             }
         };
 
     return  function (iSup, iSub) {
-        DataScope.prototype = $.isEmptyObject(iSup) ? iPrototype : iSup;
+        DataScope.prototype = (
+            iSup  &&  (iSup.toString() == '[object DataScope]')
+        ) ?
+            iSup  :  $.extend(iSup, iPrototype);
 
         var iData = new DataScope(iSub);
 
-        DataScope.prototype = null;
+        if (! $.browser.modern)
+            iData.__proto__ = DataScope.prototype;
+
+        DataScope.prototype = { };
 
         return iData;
     };
@@ -49,25 +94,217 @@ var DS_Inherit = (function (BOM, DOM, $) {
 
 
 
+var HTML_Template = (function (BOM, DOM, $) {
+
+    function HTML_Template($_View, iURL) {
+
+        this.$_View = $( $_View ).data(this.constructor.getClass(), this);
+
+        this.source = (iURL || '').match(/\.(html?|md)\??/)  ?
+            iURL.split('?')[0] : iURL;
+        this.map = { };
+    }
+
+    try {
+        eval('``');
+
+        var ES_ST = function () {
+                return  eval('`' + arguments[0] + '`');
+            };
+    } catch (iError) {
+        var Eval_This = function () {
+                return  eval( arguments[0] );
+            };
+    }
+
+    $.extend(HTML_Template, {
+        getClass:       $.CommonView.getClass,
+        instanceOf:     $.CommonView.instanceOf,
+        expression:     /\$\{([\s\S]+?)\}/g,
+        reference:      /this\.(\w+)/,
+        eval:           function (iTemplate, iContext) {
+            return  ES_ST  ?  ES_ST.call(iContext, iTemplate)  :
+                iTemplate.replace(this.expression,  function () {
+
+                    return  Eval_This.call(iContext, arguments[1]);
+                });
+        },
+        getContext:     function (iTemplate, iData) {
+            var iContext = { };
+
+            (iTemplate || '').replace(this.expression,  function () {
+
+                arguments[1].replace(HTML_Template.reference,  function () {
+
+                    iContext[ arguments[1] ] = iData[ arguments[1] ];
+                });
+            });
+
+            return iContext;
+        },
+        getTextNode:    function (iDOM) {
+            return Array.prototype.concat.apply(
+                $.map(iDOM.childNodes,  function (iNode) {
+                    return  (iNode.nodeType == 3)  ?  iNode  :  null;
+                }),
+                iDOM.attributes
+            );
+        }
+    });
+
+    $.extend(HTML_Template.prototype, {
+        toString:    $.CommonView.prototype.toString,
+        pushMap:     function (iName, iNode) {
+            if ( iName )
+                if (iNode instanceof $.ListView)
+                    this.map[iName] = iNode;
+                else {
+                    this.map[iName] = this.map[iName] || [ ];
+
+                    this.map[iName].push({
+                        node:        iNode,
+                        template:    iNode.nodeValue,
+                        parent:      iNode.parentNode || iNode.ownerElement
+                    });
+                }
+
+            return this;
+        },
+        parse:        function () {
+            var $_DOM = this.$_View.find('*:not([name]:list *)').not(function () {
+
+                    return  (! this.outerHTML.match( HTML_Template.expression ));
+                }),
+                _This_ = this;
+
+            $_DOM.not(
+                $_DOM.not('[name]:list').each(function () {
+
+                    $.each(HTML_Template.getTextNode( this ),  function () {
+                        var iNode = this;
+
+                        var iValue = this.nodeValue.replace(
+                                HTML_Template.expression,
+                                function (iName) {
+                                    iName = iName.match( HTML_Template.reference );
+
+                                    _This_.pushMap((iName || '')[1],  iNode);
+
+                                    return '';
+                                }
+                            );
+                        if (iValue == this.nodeValue)  return;
+
+                        if ((! iValue)  &&  (this.nodeType == 2))
+                            this.ownerElement.removeAttribute( this.nodeName );
+                        else
+                            this.nodeValue = iValue;
+                    });
+                })
+            ).each(function () {
+
+                _This_.pushMap(
+                    this.getAttribute('name'),
+                    $.ListView( this ).clear()
+                        .on('insert',  function () {
+
+                            (new HTML_Template( arguments[0] )).parse();
+                        })
+                        .on('update',  function () {
+
+                            HTML_Template.instanceOf( arguments[0] )
+                                .render( arguments[1] );
+                        })
+                );
+            });
+
+            return this;
+        },
+        load:         function () {
+            var _This_ = this;
+
+            return  new Promise(function () {
+
+                if (_This_.source)
+                    _This_.$_View.load(_This_.source,  arguments[0]);
+                else
+                    arguments[0]( _This_.$_View[0].innerHTML );
+
+            }).then(function () {
+
+                _This_.parse();
+            });
+        },
+        render:       function (iData) {
+            for (var iName in iData) {
+                if (! this.map.hasOwnProperty( iName ))  continue;
+
+                if (this.map[iName] instanceof $.ListView)
+                    this.map[iName].render( iData[iName] );
+                else
+                    $.each(this.map[iName],  function () {
+                        var iValue = HTML_Template.eval(this.template, iData),
+                            iNode = this.node;
+
+                        switch ( iNode.nodeType ) {
+                            case 3:    {
+                                if (! (iNode.previousSibling || iNode.nextSibling))
+                                    return  this.parent.innerHTML = iValue;
+
+                                break;
+                            }
+                            case 2:    if (iNode.nodeName in this.parent) {
+                                try {
+                                    iValue = eval( iValue );
+                                } catch (iError) { }
+
+                                return  this.parent[ iNode.nodeName ] = iValue;
+
+                            } else if (! iNode.ownerElement) {
+                                if ( iValue )
+                                    this.parent.setAttribute(
+                                        iNode.nodeName,  iValue
+                                    );
+
+                                return;
+                            }
+                        }
+
+                        iNode.nodeValue = iValue;
+                    });
+            }
+
+            return this;
+        }
+    });
+
+    return HTML_Template;
+
+})(self, self.document, self.jQuery);
+
+
+
 var ViewDataIO = (function (BOM, DOM, $, DS_Inherit) {
 
-    function ArrayRender(iArray, ValueRender) {
+    function ArrayRender(iArray, ValueRender, iScope) {
+
+        iArray = iScope  ?  DS_Inherit(iScope, iArray)  :  iArray;
 
         $.ListView(this,  function ($_Item, iValue) {
 
             $_Item.data('EWA_DS',  DS_Inherit(iArray, iValue))
                 .value('name', iValue);
 
-            ValueRender.call($_Item, iValue);
+            ValueRender.call($_Item, iValue, iArray);
 
         }).clear().render( iArray );
     }
 
-    function ObjectRender(iData) {
+    function ObjectRender(iData, iScope) {
         var _Self_ = arguments.callee;
 
         if ($.likeArray( iData ))
-            return  ArrayRender.call(this[0], iData, _Self_);
+            return  ArrayRender.call(this[0], iData, _Self_, iScope);
 
         var iView = $.CommonView.instanceOf(this, false);
 
@@ -76,7 +313,7 @@ var ViewDataIO = (function (BOM, DOM, $, DS_Inherit) {
         this.value('name',  function (iName) {
 
             if ($.likeArray( iData[iName] ))
-                ArrayRender.call(this, iData[iName], _Self_);
+                ArrayRender.call(this, iData[iName], _Self_, iData);
             else if ($.isPlainObject( iData[iName] ))
                 _Self_.call($(this), iData[iName]);
             else
@@ -86,19 +323,22 @@ var ViewDataIO = (function (BOM, DOM, $, DS_Inherit) {
 
     $.fn.extend({
         dataRender:    function (iData) {
-            if (! $.likeArray(iData)) {
-                ObjectRender.call(this, iData);
+            switch (true) {
+                case  $.likeArray( iData ):    {
+                    var iView = $.ListView.instanceOf(this, false);
 
-                return this;
+                    ArrayRender.call(
+                        iView  ?
+                            iView.$_View[0]  :  $.ListView.findView(this, true)[0],
+                        iData,
+                        ObjectRender
+                    );
+
+                    break;
+                }
+                case  (! $.isEmptyObject(iData)):
+                    ObjectRender.call(this, iData);
             }
-
-            var iView = $.ListView.instanceOf(this, false);
-
-            ArrayRender.call(
-                iView  ?  iView.$_View[0]  :  $.ListView.findView(this, true)[0],
-                iData,
-                ObjectRender
-            );
 
             return this;
         },
@@ -130,16 +370,13 @@ var ViewDataIO = (function (BOM, DOM, $, DS_Inherit) {
 
 
 
-var UI_Module = (function (BOM, DOM, $, DS_Inherit) {
+var UI_Module = (function (BOM, DOM, $, DS_Inherit, HTML_Template) {
 
     function UI_Module(iLink) {
         this.ownerApp = iLink.ownerApp;
         this.source = iLink;
 
-        var iScope = iLink.ownerView && iLink.ownerView.getData();
-        iScope = $.likeArray(iScope)  ?  { }  :  iScope;
-
-        this.data = DS_Inherit(iScope || { },  this.getEnv());
+        this.data = DS_Inherit(this.getScope(), this.getEnv());
 
         this.$_View = iLink.getTarget();
         this.$_View = this.$_View[0] ? this.$_View : iLink.$_DOM;
@@ -152,12 +389,19 @@ var UI_Module = (function (BOM, DOM, $, DS_Inherit) {
 
     $.extend(UI_Module, {
         getClass:      $.CommonView.getClass,
-        instanceOf:    $.CommonView.instanceOf,
-        $_Template:    { }
+        instanceOf:    $.CommonView.instanceOf
     });
 
     $.extend(UI_Module.prototype, {
         toString:      $.CommonView.prototype.toString,
+        trigger:       function () {
+            return this.ownerApp.trigger(
+                arguments[0],
+                this.source.href || '',
+                this.source.src || this.source.action || '',
+                [ this.source ].concat( arguments[1] )
+            ).slice(-1)[0];
+        },
         detach:        function () {
             this.$_Content = this.$_View.children().detach();
 
@@ -168,22 +412,25 @@ var UI_Module = (function (BOM, DOM, $, DS_Inherit) {
 
             if (this.$_Content) {
                 this.$_View.append( this.$_Content );
-                this.ownerApp.trigger('attach');
+                this.trigger('ready');
             } else if (this.lastLoad)
                 this.load();
 
             return this;
         },
-        getData:       function () {
-            var iLV = $.ListView.instanceOf( this.source.$_DOM );
+        getScope:      function () {
+            var iLV = $.ListView.instanceOf( this.source.$_DOM ),  iData;
 
-            if ((! iLV)  ||  (iLV.$_View[0] === this.source.$_DOM[0]))
-                return this.data;
+            if (iLV  &&  (iLV.$_View[0] !== this.source.$_DOM[0])) {
 
-            var $_Item = this.source.$_DOM.parentsUntil( iLV.$_View );
+                var $_Item = this.source.$_DOM.parentsUntil( iLV.$_View );
 
-            return  ($_Item[0] ? $_Item.slice(-1) : this.source.$_DOM)
-                .data('EWA_DS');
+                iData = ($_Item[0] ? $_Item.slice(-1) : this.source.$_DOM)
+                    .data('EWA_DS');
+            }
+            iData = iData  ||  (this.source.ownerView || '').data;
+
+            return  $.likeArray(iData) ? { } : iData;
         },
         getEnv:        function () {
             var iData = { },
@@ -243,30 +490,16 @@ var UI_Module = (function (BOM, DOM, $, DS_Inherit) {
             ));
         },
         loadJSON:      function () {
-            return this.source.loadData(
-                UI_Module.prototype.getData.call(this) ||
-                    UI_Module.instanceOf('body').data
-            );
+            return  this.source.loadData( this.data );
         },
         loadHTML:      function () {
-            var iTemplate = this.constructor.$_Template,
-                iHTML = this.source.href.split('?')[0],
-                _This_ = this;
+            this.template = new HTML_Template(
+                this.$_View,  this.source.getURL('href')
+            );
 
-            return  new Promise(function (iResolved) {
-                if (iTemplate[iHTML])
-                    return iResolved(
-                        iTemplate[iHTML].clone(true).appendTo(_This_.$_View)
-                    );
+            var _This_ = this;
 
-                _This_.$_View.load(iHTML,  function () {
-                    iResolved(
-                        iTemplate[iHTML] = $(this.children).not('script').clone(true)
-                    );
-                });
-            }).then(function () {
-                _This_.ownerApp.trigger('attach');
-
+            return  this.template.load().then(function () {
                 var iLink = _This_.prefetch().source;
 
                 var $_Target = iLink.getTarget();
@@ -274,89 +507,77 @@ var UI_Module = (function (BOM, DOM, $, DS_Inherit) {
                 var $_Link = $_Target.children('link[target="_blank"]')
                         .attr('href', iLink.href);
 
-                var _Link_ = $_Link[0] && (
-                        new iLink.constructor(iLink.ownerApp, $_Link[0])
-                    ).register(iLink.ownerApp.length - 1);
-
                 if (
                     ((! iLink.href)  ||  iLink.src  ||  iLink.action)  ||
                     ($_Target[0] != _This_.ownerApp.$_Root[0])  ||
-                    (! _Link_)
+                    (! $_Link[0])
                 )
                     return;
+
+                _This_.template.render( _This_.data );
+
+                var _Link_ = (new iLink.constructor(iLink.ownerApp, $_Link[0]))
+                        .register(iLink.ownerApp.length - 1);
 
                 iLink.method = _Link_.method || iLink.method;
                 iLink.src = _Link_.src;
                 iLink.data = _Link_.data;
 
-                $.extend(_This_.data, _This_.getEnv());
+                _This_.data.extend( _This_.getEnv() );
 
                 return _This_.loadJSON();
             });
         },
-        setData:       function (iData) {
-            if (! $.isEmptyObject(iData)) {
-                $.extend(this.data, iData);
-
-                if ($.likeArray( iData )) {
-                    this.data.length = iData.length;
-
-                    Array.prototype.splice.call(
-                        this.data,  iData.length,  iData.length
-                    );
-                }
-            }
-            return this.data;
-        },
         render:        function (iData) {
-            iData = this.setData(iData);
+            this.data.extend(this.trigger('data', [iData])  ||  iData);
 
-            if (! $.isEmptyObject(iData))  this.$_View.dataRender(iData);
+            if (! this.data.isNoValue()) {
+                this.$_View.dataRender( this.data );
 
-            this.lastLoad = $.now();
+                if (this.template instanceof HTML_Template)
+                    this.template.render( this.data );
+            }
 
-            this.trigger('ready');
+            var _This_ = this;
 
-            return this.loadModule();
-        },
-        trigger:       function () {
-            return this.ownerApp.trigger(
-                arguments[0],
-                this.source.href || '',
-                this.source.src || this.source.action || '',
-                [ this.source.valueOf() ].concat( arguments[1] )
-            ).slice(-1)[0];
+            return  this.loadModule().then(function () {
+
+                _This_.lastLoad = $.now();
+                _This_.domReady = null;
+
+                _This_.trigger('ready');
+
+                return _This_.loadModule();
+
+            },  function () {
+
+                _This_.domReady = null;
+            });
         },
         load:          function () {
             var _This_ = this,
                 iJSON = this.source.getURL('src') || this.source.getURL('action');
 
-            return Promise.all([
-                iJSON  &&  this.loadJSON(),
-                this.source.href  &&  this.loadHTML()
-            ]).then(function (_Data_) {
+            this.lastLoad = 0;
 
+            return  this.domReady = Promise.all([
+                iJSON  &&  this.loadJSON(),  this.loadHTML()
+            ]).then(function (_Data_) {
                 _Data_ = _Data_[0] || _Data_[1];
 
-                if ((_Data_ !== undefined)  &&  (_Data_ != null))
-                    _This_.setData(_This_.trigger('data', [_Data_])  ||  _Data_);
-
-                return _This_.loadModule();
-
-            }).then(function () {
-
-                _This_.render();
+                return  _This_.$_View.children('script')[0] ?
+                    _Data_ : _This_.render(_Data_);
             });
         }
     });
 
     return UI_Module;
 
-})(self, self.document, self.jQuery, DS_Inherit);
+})(self, self.document, self.jQuery, DS_Inherit, HTML_Template);
 
 
 
-var InnerLink = (function (BOM, DOM, $, UI_Module) {
+var InnerLink = (function (BOM, DOM, $, UI_Module, HTML_Template) {
 
     function InnerLink(iApp, iLink) {
         this.ownerApp = iApp;
@@ -406,14 +627,10 @@ var InnerLink = (function (BOM, DOM, $, UI_Module) {
             return  this.target  ?  $('*[name="' + this.target + '"]')  :  $();
         },
         getArgs:      function () {
-            var iArgs = { },  iData = this.ownerView.getData();
+            var iData = this.ownerView.data;
 
-            (this.src || this.action || '').replace(
-                InnerLink.reURLVar,
-                function () {
-                    iArgs[ arguments[1] ] = iData[ arguments[1] ];
-                }
-            );
+            var iArgs = HTML_Template.getContext(this.src || this.action,  iData);
+
             for (var iKey in this.data)
                 iArgs[ this.data[iKey] ] = iData[ this.data[iKey] ];
 
@@ -427,7 +644,7 @@ var InnerLink = (function (BOM, DOM, $, UI_Module) {
 
             if (! iURL)  return;
 
-            if (! $.isEmptyObject(iScope)) {
+            if (iScope  &&  iScope.isNoValue  &&  (! iScope.isNoValue())) {
                 var _Args_ = { },  _Data_;
 
                 for (var iKey in this.data) {
@@ -498,7 +715,7 @@ var InnerLink = (function (BOM, DOM, $, UI_Module) {
 
     return InnerLink;
 
-})(self, self.document, self.jQuery, UI_Module);
+})(self, self.document, self.jQuery, UI_Module, HTML_Template);
 
 
 
@@ -578,7 +795,7 @@ var WebApp = (function (BOM, DOM, $, UI_Module, InnerLink) {
 
             var iLink = iModule.source,  _This_ = this;
 
-            $.extend(iModule.data, $.paramJSON());
+            iModule.data.extend( $.paramJSON() );
 
             iModule[
                 (iLink.href || iLink.src || iLink.action)  ?  'load'  :  'render'
@@ -625,7 +842,7 @@ var WebApp = (function (BOM, DOM, $, UI_Module, InnerLink) {
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v3.0  (2016-09-06)  Beta
+//      [Version]    v3.2  (2016-11-29)  Alpha
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -640,57 +857,91 @@ var WebApp = (function (BOM, DOM, $, UI_Module, InnerLink) {
 
 
 
-var EasyWebApp = (function (BOM, DOM, $, WebApp, InnerLink, UI_Module) {
+var EasyWebApp = (function (BOM, DOM, $, WebApp, InnerLink, UI_Module, HTML_Template) {
 
     $.ajaxSetup({dataType: 'json'});
 
+
+/* ----- SPA 链接事件 ----- */
+
     $(DOM).on('click',  'a[href]:not(a[target="_blank"])',  function () {
 
-        var iURL = this.href.split('#!');
+        var iURL = this.href.split('#');
 
-        if (iURL[1]  &&  (iURL[0] == DOM.URL.split('#!')[0])) {
-            arguments[0].preventDefault();
+        if (iURL[0] != DOM.URL.split('#')[0])
+            return  this.target = '_blank';
 
-            (new WebApp()).load( iURL[1] );
-        }
+        arguments[0].preventDefault();
+
+        iURL = (iURL[1][0] == '!')  &&  iURL[1].slice(1);
+
+        if (iURL)  (new WebApp()).load(iURL);
+
     }).on('click submit',  InnerLink.selector,  function (iEvent) {
 
         if (this.tagName == 'FORM') {
             if (iEvent.type != 'submit')  return;
 
             iEvent.preventDefault();
-        }
+        } else if ( iEvent.isPseudo() )
+            return;
 
         iEvent.stopPropagation();
 
-        var iLink = new InnerLink(new WebApp(), this);
+        var iLink = new InnerLink(new WebApp(), this),  iModule;
 
         switch (iLink.target) {
             case null:        ;
             case '':          return;
-            case '_blank':
-                UI_Module.prototype.loadJSON.call({
-                    source:    iLink,
-                    data:      iLink.ownerView.getData()
-                }).then(function () {
-                    iLink.ownerApp.trigger(
-                        'data',  '',  iLink.src || iLink.action,  [
-                            iLink.valueOf(),  arguments[0]
-                        ]
-                    );
+            case '_blank':    {
+                iModule = $.extend({
+                    ownerApp:    iLink.ownerApp,
+                    source:      iLink,
+                    data:        iLink.ownerView.data
+                }, UI_Module.prototype);
+
+                iModule.loadJSON().then(function () {
+
+                    iModule.trigger('data', arguments[0]);
                 });
                 break;
+            }
             case '_self':     ;
-            default:          (new UI_Module(iLink)).load();
+            default:          {
+                iModule = iLink.ownerApp.getModule( iLink.$_DOM );
+
+                if ((! iModule)  ||  !(iModule.domReady instanceof Promise))
+                    (new UI_Module(iLink)).load();
+            }
         }
-    }).change(function () {
-
-        var $_VS = $( arguments[0].target );
-
-        UI_Module.instanceOf( $_VS )
-            .data[ $_VS[0].getAttribute('name') ] = $_VS.val();
     });
-})(self, self.document, self.jQuery, WebApp, InnerLink, UI_Module);
+
+/* ----- 视图数据监听 ----- */
+
+    function Data_Change() {
+        var iValue = $(this).value('name');
+
+        try {
+            iValue = eval( iValue );
+        } catch (iError) { }
+
+        iValue = (iValue != null)  ?  iValue  :  '';
+
+        var iName = this.getAttribute('name');
+
+        UI_Module.instanceOf( this ).data.setValue(iName, iValue);
+
+        var iData = { };
+        iData[iName] = iValue;
+
+        HTML_Template.instanceOf( this ).render( iData );
+    }
+
+    $(DOM)
+        .on('change', 'select', Data_Change)
+        .on('keyup paste', ':input:not(select)', Data_Change);
+
+})(self, self.document, self.jQuery, WebApp, InnerLink, UI_Module, HTML_Template);
 
 
 });

@@ -15,15 +15,27 @@ define(['jquery', 'marked', 'EasyWebUI', 'EasyWebApp'],  function ($, marked) {
             ]('focus');
         });
 
-        $('body > .PC_Narrow').iWebApp()
-            .on('data',  '',  'index.json',  function (iLink, iData) {
+        var $_App = $('#Main_Content');
 
-                $.ListView(iLink.$_DOM,  false,  function ($_Item, iValue) {
+        var $_ReadNav = $('#Content_Nav').iReadNav( $_App ).scrollFixed();
 
-                    $_Item.children().attr(iValue);
-                });
+        $_App.iWebApp().on('data',  '',  'index.json',  function () {
 
-                return iData;
+            $.ajaxSetup({
+                headers:    {
+                    Authorization:    'token ' + arguments[1].Git_Token
+                }
             });
+        }).on('ready',  '\\.(html|md)',  function () {
+
+            $_ReadNav.trigger('Refresh');
+
+        }).on('data',  '',  '/contents/',  function (_, iData) {
+            return {
+                content:    $.map(iData,  function () {
+                    return  (arguments[0].type != 'dir')  ?  null  :  arguments[0];
+                })
+            };
+        });
     });
 });
