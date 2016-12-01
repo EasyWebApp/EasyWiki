@@ -9,7 +9,7 @@ define(['jquery', 'marked', 'EasyWebUI', 'EasyWebApp'],  function ($, marked) {
 
     $(document).ready(function () {
 
-        $('body > .Head > .NavBar').scrollFixed(function () {
+        $('#Main_Nav').scrollFixed(function () {
             $(this.firstElementChild)[
                 (arguments[0] == 'fixed')  ?  'addClass'  :  'removeClass'
             ]('focus');

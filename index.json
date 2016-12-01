@@ -7,9 +7,8 @@
             "href":     "#"
         },
         {
-            "title":        "概览",
-            "href":         "#!ReadMe.md",
-            "autofocus":    true
+            "title":    "概览",
+            "href":     "#!ReadMe.md"
         },
         {
             "title":     "开源代码",
@@ -24,8 +23,8 @@
     ],
     "Git_API":        "https://api.github.com",
     "Git_Token":      "5ca02ccfaba1b3baac1fe68e19217195412a8b5d",
-    "Git_Account":    "FreeCodeCamp-Chengdu",
-    "Git_Repo":       "blog",
-    "Git_Branch":     "master",
-    "Root_Path":      "activity"
+    "Git_Account":    "TechQuery",
+    "Git_Repo":       "EasyWiki",
+    "Git_Branch":     "EWAwiki",
+    "Root_Path":      "markdown"
 }
