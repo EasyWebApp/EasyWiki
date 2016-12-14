@@ -7,8 +7,9 @@
             "href":     "#"
         },
         {
-            "title":    "概览",
-            "href":     "#!ReadMe.md"
+            "title":        "概览",
+            "href":         "#!ReadMe.md",
+            "autofocus":    true
         },
         {
             "title":     "开源代码",

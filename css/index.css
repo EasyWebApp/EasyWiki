@@ -84,6 +84,23 @@ body > .Foot > * {
 }
 
 
+body > .PC_Narrow > div {
+    position:    relative;
+}
+#Toolkit {
+    position:    absolute;
+    top:         1.5em;
+    right:       0;
+}
+#QRcode > .Body {
+    left:     auto;
+    right:    0;
+}
+#QRcode .Icon:hover {
+	background:    transparent;
+}
+
+
 #Main_Content ul a > img {
     max-width:    10em;
 }

@@ -7,24 +7,34 @@
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no,target-densitydpi=medium-dpi">
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
 
     <title>艾娃维基 - EWAwiki</title>
 
     <link rel="stylesheet" href="//tech_query.oschina.io/css/EasyWebUI.css" />
     <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet"
+          href="//cdn.bootcss.com/medium-editor/5.22.1/css/medium-editor.min.css" />
+    <link rel="stylesheet"
+          href="//cdn.bootcss.com/medium-editor/5.22.1/css/themes/default.min.css" />
 
     <script src="//cdn.bootcss.com/require.js/2.2.0/require.min.js"></script>
     <script>
         require.config({
             baseUrl:    'javascript/',
             paths:      {
-                jquery:       '//cdn.bootcss.com/jquery/1.12.4/jquery.min',
-                'jQuery+':    '//tech_query.oschina.io/iquery/jQuery+',
-                'iQuery+':    '//tech_query.oschina.io/iquery/iQuery+',
-                EasyWebUI:    '//tech_query.oschina.io/css/EasyWebUI',
-                marked:       '//cdn.bootcss.com/marked/0.3.6/marked.min'
-            }
+                jquery:          '//cdn.bootcss.com/jquery/1.12.4/jquery.min',
+                'jQuery+':       '//tech_query.oschina.io/iquery/jQuery+',
+                'iQuery+':       '//tech_query.oschina.io/iquery/iQuery+',
+                EasyWebUI:       '//tech_query.oschina.io/css/EasyWebUI',
+                marked:          '//cdn.bootcss.com/marked/0.3.6/marked.min',
+                MediumEditor:
+                    '//cdn.bootcss.com/medium-editor/5.22.1/js/medium-editor.min',
+                QRcode:
+                    '//cdn.bootcss.com/lrsjng.jquery-qrcode/0.14.0/jquery-qrcode.min'
+            },
+            shim:       {QRcode:  ['jquery']}
         });
 
         require(['index']);
@@ -33,7 +43,7 @@
     <div class="Head CenterX Black_O">
         <div class="Grid-Row CenterY">
             <div id="Main_Title">
-                <h1 target="_self" href="html/list.html" autofocus>
+                <h1 target="_self" href="html/list.html">
                     ${this.Title}
                 </h1>
                 <p>${this.Description}</p>
@@ -42,14 +52,23 @@
         <div class="DropDown Head">
             <ul class="NavBar Black_O" id="Main_Nav" name="Main_Nav">
                 <li><a target="${this.target || '_self'}" href="${this.href}"
-                       autofocus="${this.autofocus || false}">
+                       autofocus="${this.autofocus}">
                     ${this.title}
                 </a></li>
             </ul>
         </div>
     </div>
     <div class="PC_Narrow Grid-Row">
-        <div id="Main_Content"></div>
+        <div>
+            <div id="Toolkit">
+                <span class="DropDown Head" id="QRcode">
+                    <i class="Icon Mobile"></i>
+                    <div class="DropDown Body"></div>
+                </span>
+                <i class="Icon Pen"></i>
+            </div>
+            <div id="Main_Content"></div>
+        </div>
         <ul class="Column_1-5" id="Content_Nav" tabindex="-1">
             <li><a></a></li>
         </ul>
@@ -59,7 +78,8 @@
             (C)2016  <a target="_blank" href="https://tech_query.oschina.io/">Tech_Query</a>
         </span>
         <span>
-            Powered by <a target="_blank" href="https://tech_query.oschina.io/easywebapp/">EasyWebApp</a>
+            Powered by
+            <a target="_blank" href="https://tech_query.oschina.io/easywebapp/">EasyWebApp</a>
         </span>
     </div>
 </body></html>

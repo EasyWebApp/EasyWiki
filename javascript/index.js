@@ -1,4 +1,6 @@
-define(['jquery', 'marked', 'EasyWebUI', 'EasyWebApp'],  function ($, marked) {
+define([
+    'jquery', 'marked', 'MediumEditor', 'EasyWebUI', 'EasyWebApp', 'QRcode'
+],  function ($, marked, MediumEditor) {
 
     $.ajaxSetup({
         dataFilter:    function (iText) {
@@ -17,6 +19,14 @@ define(['jquery', 'marked', 'EasyWebUI', 'EasyWebApp'],  function ($, marked) {
 
         var $_App = $('#Main_Content');
 
+        $('#Toolkit .Icon.Pen').click(function () {
+
+            if ($_App[0].contentEditable == "true")
+                MediumEditor.getEditorFromElement( $_App[0] ).destroy();
+            else
+                new MediumEditor( $_App[0] );
+        });
+
         var $_ReadNav = $('#Content_Nav').iReadNav( $_App ).scrollFixed();
 
         $_App.iWebApp().on('data',  '',  'index.json',  function () {
@@ -29,6 +39,19 @@ define(['jquery', 'marked', 'EasyWebUI', 'EasyWebApp'],  function ($, marked) {
         }).on('ready',  '\\.(html|md)',  function () {
 
             $_ReadNav.trigger('Refresh');
+
+            var iTitle = this.$_Root.find('h1').text() || '';
+
+            document.title = iTitle + ' - EasyWiki';
+
+            $('#QRcode > .Body').empty().qrcode({
+                render:     $.browser.modern ? 'image' : 'div',
+                ecLevel:    'H',
+                radius:     0.5,
+                mode:       2,
+                label:      iTitle.slice(0, 10),
+                text:       self.location.href
+            });
 
         }).on('data',  '',  '/contents/',  function (_, iData) {
             return {
