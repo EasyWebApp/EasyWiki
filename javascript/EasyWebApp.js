@@ -113,12 +113,16 @@ var Node_Template = (function (BOM, DOM, $) {
         eval('``');
 
         var ES_ST = function () {
+                'use strict';
+
                 var iValue = eval('`' + arguments[0] + '`');
 
                 return  (iValue != null)  ?  iValue  :  '';
             };
     } catch (iError) {
         var Eval_This = function () {
+                'use strict';
+
                 var iValue = eval( arguments[0] );
 
                 return  (iValue != null)  ?  iValue  :  '';
@@ -127,11 +131,15 @@ var Node_Template = (function (BOM, DOM, $) {
 
     $.extend(Node_Template.prototype, {
         eval:        function (iContext) {
-            return  ES_ST  ?  ES_ST.call(iContext, this.raw)  :
-                this.raw.replace(Node_Template.expression,  function () {
+            try {
+                return  ES_ST  ?  ES_ST.call(iContext, this.raw)  :
+                    this.raw.replace(Node_Template.expression,  function () {
 
-                    return  Eval_This.call(iContext, arguments[1]);
-                });
+                        return  Eval_This.call(iContext, arguments[1]);
+                    });
+            } catch (iError) {
+                return '';
+            }
         },
         getRefer:    function () {
             var iRefer = [ ];
@@ -197,6 +205,8 @@ var HTML_Template = (function (BOM, DOM, $, DS_Inherit, Node_Template) {
 
         this.$_View = $( $_View ).data(this.constructor.getClass(), this);
 
+        this.type = $.expr[':'].list( this.$_View[0] )  ?  'list'  :  'plain';
+
         this.scope = DS_Inherit(iScope,  { });
 
         this.source = (iURL || '').match(/\.(html?|md)\??/)  ?
@@ -254,6 +264,8 @@ var HTML_Template = (function (BOM, DOM, $, DS_Inherit, Node_Template) {
 
             for (var i = 0;  iName[i];  i++)
                 this.map[iName[i]] = (this.map[iName[i]] || 0)  +  iNode;
+
+            return this;
         },
         parsePlain:    function () {
             var _This_ = this;
@@ -276,44 +288,55 @@ var HTML_Template = (function (BOM, DOM, $, DS_Inherit, Node_Template) {
                 }
             );
         },
-        parse:         function () {
-            var $_DOM = this.$_View.find('*').not('[name]:list *').not(
-                    this.$_View.find('[src] *,  [href]:not(a, link, [target]) *')
-                ),
+        parseList:     function (iList) {
+            var iView = $[
+                    $(':media', iList)[0]  ?  'GalleryView'  :  'ListView'
+                ]( iList ),
                 _This_ = this;
 
-            $_DOM.filter('[name]:input').each(function () {
+            return this.pushMap(
+                iList.getAttribute('name'),
+                iView.on('insert',  function () {
 
-                _This_.pushMap(this.name || this.getAttribute('name'),  this);
-            });
+                    (new HTML_Template(arguments[0], _This_.scope)).parse();
+
+                }).on('update',  function () {
+
+                    HTML_Template.instanceOf( arguments[0] )
+                        .render( arguments[1] );
+                })
+            );
+        },
+        parse:         function () {
+            if (this.type == 'list')
+                return  this.parseList( this.$_View[0] );
+
+            var $_List = $.ListView.findView( this.$_View ).filter('[name]');
+
+            var $_DOM = this.$_View.find('*').not(
+                    this.$_View.find('[src],  [href]:not(a, link, [target])')
+                        .add( $_List ).find('*')
+                );
+
+            var $_Input = $_DOM.filter('[name]:input');
+
+            for (var i = 0;  $_Input[i];  i++)
+                this.pushMap(
+                    $_Input[i].name || $_Input[i].getAttribute('name'),  $_Input[i]
+                );
 
             $_DOM = $_DOM.add( this.$_View ).filter(function () {
+
                 return  this.outerHTML.match( Node_Template.expression );
             });
 
-            var $_Plain = $_DOM.not('[name]:list');
+            var $_Plain = $_DOM.not( $_List );
 
             for (var i = 0;  $_Plain[i];  i++)
                 this.parsePlain( $_Plain[i] );
 
-            $_DOM.not( $_Plain ).each(function () {
-                var iView = $[
-                        $(':media', this)[0]  ?  'GalleryView'  :  'ListView'
-                    ]( this );
-
-                _This_.pushMap(
-                    this.getAttribute('name'),
-                    iView.on('insert',  function () {
-
-                        (new HTML_Template(arguments[0], _This_.scope)).parse();
-
-                    }).on('update',  function () {
-
-                        HTML_Template.instanceOf( arguments[0] )
-                            .render( arguments[1] );
-                    })
-                );
-            });
+            for (var i = 0;  $_List[i];  i++)
+                this.parseList( $_List[i] );
 
             return this;
         },
@@ -343,8 +366,6 @@ var HTML_Template = (function (BOM, DOM, $, DS_Inherit, Node_Template) {
                     });
 
                 $_Slot.not('[name]').replaceWith(_This_.$_Slot.not( $_Named ));
-
-                _This_.parse();
             });
         },
         data2Node:     function (iData) {
@@ -552,7 +573,7 @@ var UI_Module = (function (BOM, DOM, $, HTML_Template, Node_Template) {
             var _This_ = this,  InnerLink = this.source.constructor;
 
             var $_Module = this.$_View
-                    .find('*[href]:not(a, link), *[src]:not(img, iframe, script)')
+                    .find('*[href]:not(a, link), *[src]:not(:media, script)')
                     .not( InnerLink.selector );
 
             return Promise.all($.map(
@@ -592,6 +613,10 @@ var UI_Module = (function (BOM, DOM, $, HTML_Template, Node_Template) {
             var _This_ = this;
 
             return  this.template.load().then(function () {
+
+                _This_.trigger('template');
+
+                _This_.template.parse();
 
                 var $_Link = _This_.$_View.children('link[target="_blank"]');
 
@@ -930,7 +955,7 @@ var WebApp = (function (BOM, DOM, $, UI_Module, InnerLink) {
 //                    >>>  EasyWebApp.js  <<<
 //
 //
-//      [Version]    v3.3  (2016-12-13)  Alpha
+//      [Version]    v3.3  (2016-12-21)  Beta
 //
 //      [Require]    iQuery  ||  jQuery with jQuery+,
 //
@@ -1060,7 +1085,7 @@ var EasyWebApp = (function (BOM, DOM, $, WebApp, InnerLink, UI_Module, HTML_Temp
         .on(
             'keyup paste',
             ':input:not(:button, ' + Only_Change + ')',
-            Data_Change
+            $.throttle( Data_Change )
         );
 
 })(self, self.document, self.jQuery, WebApp, InnerLink, UI_Module, HTML_Template);

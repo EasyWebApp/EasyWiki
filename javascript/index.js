@@ -3,9 +3,28 @@ define([
 ],  function ($, marked, MediumEditor) {
 
     $.ajaxSetup({
-        dataFilter:    function (iText) {
-            return  ($.fileName( this.url ).match(/\.(md|markdown)$/i))  ?
-                marked( iText )  :  iText;
+        dataFilter:    function (iData) {
+            var iName = $.fileName( this.url ).split('.');
+
+            switch ((iName.slice(-1)[0] || '').toLowerCase()) {
+                case 'md':          ;
+                case 'markdown':    return  marked( iData );
+                case '':            break;
+                default:            return iData;
+            }
+
+            iData = JSON.parse( iData );
+
+            if ( iData.code )
+                self.alert( iData.message );
+            else {
+                if (this.type.toUpperCase() != 'GET')
+                    self.alert( iData.message );
+
+                iData = iData.data || { };
+            }
+
+            return  JSON.stringify( iData );
         }
     });
 
@@ -27,7 +46,9 @@ define([
                 new MediumEditor( $_App[0] );
         });
 
-        var $_ReadNav = $('#Content_Nav').iReadNav( $_App ).scrollFixed();
+        var $_ReadNav = $('#Content_Nav').iReadNav( $_App ).scrollFixed(),
+            $_Toolkit = $('#Toolkit'),
+            $_QRcode = $('#QRcode > .Body');
 
         $_App.iWebApp().on('data',  '',  'index.json',  function () {
 
@@ -36,21 +57,28 @@ define([
                     Authorization:    'token ' + arguments[1].Git_Token
                 }
             });
-        }).on('ready',  '\\.(html|md)',  function () {
+        }).on('ready',  '(list\\.html|ReadMe\\.md)',  function () {
+
+            $_Toolkit.hide();
+
+        }).on('ready',  '(content\\.html|\\.md)',  function () {
 
             $_ReadNav.trigger('Refresh');
+
+            if (! $.browser.mobile)  $_Toolkit.show();
 
             var iTitle = this.$_Root.find('h1').text() || '';
 
             document.title = iTitle + ' - EasyWiki';
 
-            $('#QRcode > .Body').empty().qrcode({
-                render:     $.browser.modern ? 'image' : 'div',
-                ecLevel:    'H',
-                radius:     0.5,
-                mode:       2,
-                label:      iTitle.slice(0, 10),
-                text:       self.location.href
+            $_QRcode.empty().qrcode({
+                render:        $.browser.modern ? 'image' : 'div',
+                ecLevel:       'H',
+                radius:        0.5,
+                mode:          2,
+                label:         iTitle.slice(0, 10),
+                text:          self.location.href,
+                background:    'white'
             });
 
         }).on('data',  '',  '/contents/',  function (_, iData) {
