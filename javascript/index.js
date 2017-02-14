@@ -50,16 +50,7 @@ define([
             $_Toolkit = $('#Toolkit'),
             $_QRcode = $('#QRcode > .Body');
 
-        $_App.iWebApp().on('data',  '',  'index.json',  function (_, iData) {
-
-            $.ajaxPrefilter(function (iOption, _, iXHR) {
-
-                if (iOption.url.indexOf( iData.Git_API )  >  -1)
-                    iXHR.setRequestHeader(
-                        'Authorization',  'token ' + iData.Git_Token
-                    );
-            });
-        }).on('ready',  '(list\\.html|ReadMe\\.md)',  function () {
+        $_App.iWebApp().on('ready',  '(list\\.html|ReadMe\\.md)',  function () {
 
             $_Toolkit.hide();
 
