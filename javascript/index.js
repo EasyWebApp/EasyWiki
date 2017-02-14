@@ -6,7 +6,7 @@ define([
         dataFilter:    function (iData) {
             var iName = $.fileName( this.url ).split('.');
 
-            switch ((iName.slice(-1)[0] || '').toLowerCase()) {
+            switch (iName[1]  &&  (iName.slice(-1)[0] || '').toLowerCase()) {
                 case 'md':          ;
                 case 'markdown':    return  marked( iData );
                 case '':            break;
@@ -50,12 +50,14 @@ define([
             $_Toolkit = $('#Toolkit'),
             $_QRcode = $('#QRcode > .Body');
 
-        $_App.iWebApp().on('data',  '',  'index.json',  function () {
+        $_App.iWebApp().on('data',  '',  'index.json',  function (_, iData) {
 
-            $.ajaxSetup({
-                headers:    {
-                    Authorization:    'token ' + arguments[1].Git_Token
-                }
+            $.ajaxPrefilter(function (iOption, _, iXHR) {
+
+                if (iOption.url.indexOf( iData.Git_API )  >  -1)
+                    iXHR.setRequestHeader(
+                        'Authorization',  'token ' + iData.Git_Token
+                    );
             });
         }).on('ready',  '(list\\.html|ReadMe\\.md)',  function () {
 
@@ -80,13 +82,6 @@ define([
                 text:          self.location.href,
                 background:    'white'
             });
-
-        }).on('data',  '',  '/contents/',  function (_, iData) {
-            return {
-                content:    $.map(iData,  function () {
-                    return  (arguments[0].type != 'dir')  ?  null  :  arguments[0];
-                })
-            };
         });
     });
 });
